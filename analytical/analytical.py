@@ -20,11 +20,13 @@ References:
 
 # Modules
 #------------------------------------------------------------------------------
-
+import plotly
 import numpy as np
+import numpy.matlib
 import matplotlib.pyplot as py
 from funcTheta import theta
-
+import pltSphere
+import plotly.graph_objects as go
 py.close('all')
 
 # Parameters from Papadikis 2010a Table 1
@@ -45,7 +47,8 @@ h = 375         # heat transfer coefficent, W/(m2 K)
 ro = (d/2)                          # radius of sphere (a.k.a outer radius), m
 rs = ro/ro                          # dimensionless surface radius, (-)
 rc = 1e-12/ro                       # dimensionless center radius, (-)
-
+nDiscrR=10                          # number of discretization radius
+rr=np.linspace(rc,rs,nDiscrR)       # discretization radius
 alpha = kw/(rhow*cpw)               # thermal diffusivity biomass, m^2/s
 t = np.arange(0, tmax+0.002, 0.002) # time range for simulation, s
 z = np.arange(0, 1250, 0.1)         # range to evaluate the zeta, Bi equation
@@ -66,6 +69,55 @@ T_o = Tinf + thetaRo*(Ti-Tinf)      # convert theta to temperature in Kelvin, K
 # center temperature where r for center
 thetaR = theta(rc, b, z, Bi, Fo)    # dimensionless temperature profile
 T_r = Tinf + thetaR*(Ti-Tinf)       # convert theta to temperature in Kelvin, K
+
+# Discretized sphere temperature
+ii=0
+
+X,Y,Z=pltSphere.sphereCoord(radius=ro, resolution=nDiscrR)
+rr2=(X**2+Z**2)**0.5
+rrArray=np.zeros(nDiscrR)
+thetaRTime=np.zeros((nDiscrR, nDiscrR, len(t)))
+for ii in range(rr2.shape[1]):
+    for jj in range(rr2.shape[0]):
+        if rr2[jj,ii]==0:
+            rr2[jj,ii]=1e-12   
+        currRadius=rr2[jj,ii]        
+        # surface temperature where ro for outer surface
+        thetaRTime[jj,ii,:] = theta(currRadius/ro, b, z, Bi, Fo)   # dimensionless temperature profile    
+
+
+timeSel=250
+
+ccMin=np.min(thetaRTime[:,:,:])
+ccMax=np.max(thetaRTime[:,:,:])
+
+fig = go.Figure()
+tt=pltSphere.plotSphere(X/ro,Y/ro,Z/ro,fig, clrMatrix=np.ones(X.shape)*thetaRo[timeSel], ccLim=(ccMin, ccMax))
+tt2=pltSphere.plotSphere(X/ro,Y/ro*0.0,Z/ro,fig, clrMatrix=thetaRTime[:,:,timeSel], 
+                         ccLim=(ccMin, ccMax))
+
+
+# Add slider to the plot
+fig.update_layout(
+    sliders=[{
+        "steps": [
+            {
+                "method": "update",
+                "label": str(i),
+                "args": [
+                    {"surfacecolor": [thetaRTime[:, :, i], fig.data[1].surfacecolor]},
+                    {"title": f"Time step: {i}"}
+                ]
+            } for i in range(len(t))
+        ],
+        "active": timeSel,
+        "currentvalue": {"prefix": "Time step: "}
+    }]
+)
+
+fig.show()
+
+fig.data[0]
 
 # Cylinder Temperature Profiles
 #------------------------------------------------------------------------------
@@ -150,3 +202,4 @@ py.rcParams['ytick.major.pad'] = 6
 py.legend(loc='best', numpoints=1)
 py.grid()
 py.show()
+
