@@ -34,7 +34,7 @@ py.close('all')
 
 rhow = 700      # density of biomass, 700 kg/m3
 d = 0.035e-2    # particle diameter for 350 um size, m
-cpw = 1500      # specific heat capacity biomass, J/(kg K)
+cpw = 3500      # specific heat capacity biomass, J/(kg K)
 kw = 0.105      # thermal conductivity biomass, W/(m K)
 Ti = 300        # uniform initial temp of sphere, K
 Tinf = 773      # surrounding fluid or gas temp, K
@@ -91,33 +91,24 @@ timeSel=250
 ccMin=np.min(thetaRTime[:,:,:])
 ccMax=np.max(thetaRTime[:,:,:])
 
-fig = go.Figure()
-tt=pltSphere.plotSphere(X/ro,Y/ro,Z/ro,fig, clrMatrix=np.ones(X.shape)*thetaRo[timeSel], ccLim=(ccMin, ccMax))
-tt2=pltSphere.plotSphere(X/ro,Y/ro*0.0,Z/ro,fig, clrMatrix=thetaRTime[:,:,timeSel], 
+tt=pltSphere.plotSphere(X/ro,Y/ro*0.0,Z/ro, clrMatrix=thetaRTime[:,:,timeSel], 
                          ccLim=(ccMin, ccMax))
+tt2=pltSphere.plotSphere(X/ro,Y/ro,Z/ro, clrMatrix=np.ones(X.shape)*thetaRo[timeSel], ccLim=(ccMin, ccMax))
+fig = go.Figure(data = tt + tt2)
+#fig.add_trace(tt+tt2)
+ 
+slider_steps=pltSphere.createSliderSteps(t, thetaRTime, thetaRo)
 
 
-# Add slider to the plot
+
 fig.update_layout(
-    sliders=[{
-        "steps": [
-            {
-                "method": "update",
-                "label": str(i),
-                "args": [
-                    {"surfacecolor": [thetaRTime[:, :, i], fig.data[1].surfacecolor]},
-                    {"title": f"Time step: {i}"}
-                ]
-            } for i in range(len(t))
-        ],
-        "active": timeSel,
-        "currentvalue": {"prefix": "Time step: "}
-    }]
+    sliders=[{'steps': slider_steps,
+              "active": timeSel            
+              }]
 )
 
-fig.show()
 
-fig.data[0]
+fig.show()
 
 # Cylinder Temperature Profiles
 #------------------------------------------------------------------------------
