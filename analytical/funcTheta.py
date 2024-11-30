@@ -71,4 +71,24 @@ def theta(r, b, z, Bi, Fo):
         theta = theta + dTheta_o
         
     return theta    # theta temperature profile evaluated at r
-    
+
+def thetaLumped(r, b, h,k,alpha,t):
+    """
+    Dimensionless temperature for analytical solution of 1D transient heat
+    conduction for a solid sphere, cylinder, or slab.
+    r = dimensionaless length term to evaluate theta, (-)
+    b = shape factor where 2 sphere or 1 cylinder or 0 slab, (-)
+    z = range of zeta values to evaluate zeta, Bi equation for positive roots
+    Bi = Biot number h*L/k, (-)
+    Fo = Fourier number alpha*t/L^2, (-)
+    """
+    if b==2:
+        Lc=r/3.0
+    elif b==1: 
+        Lc=r/2.0
+    elif b==0:
+        Lc=r/2.0
+    Bi=h*Lc/k
+    Fo=alpha*t/(Lc**2)
+    thetaLumped=np.exp(-Bi*Fo)
+    return thetaLumped, Bi, Fo    # theta temperature profile evaluated at r
