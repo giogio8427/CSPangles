@@ -24,7 +24,7 @@ import plotly
 import numpy as np
 import numpy.matlib
 import matplotlib.pyplot as py
-from funcTheta import theta
+from funcTheta import theta, thetaLumped, energyTransient, energyTransientLumped
 import pltSphere
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -51,13 +51,16 @@ rc = 1e-12/ro                       # dimensionless center radius, (-)
 nDiscrR=100                          # number of discretization radius
 rr=np.linspace(1.0e-9,ro,nDiscrR)       # discretization radius
 alpha = kw/(rhow*cpw)               # thermal diffusivity biomass, m^2/s
-t = np.arange(0, tmax+1, 1) # time range for simulation, s
-z = np.arange(0, 1250, 0.1)         # range to evaluate the zeta, Bi equation
+dt=1
+t = np.arange(0, tmax+dt, dt) # time range for simulation, s
+z = np.arange(0, 2500, 0.1)         # range to evaluate the zeta, Bi equation
 z[0] = 1e-12                        # prevent divide by zero warning
 
 Bi = (h*ro)/kw                      # Biot number, (-)
 Fo = (alpha * t) / (ro**2)          # Fourier number, (-)
 
+Vol=(4.0/3.0)*np.pi*ro**3
+Sup=4.0*np.pi*ro**2
 print("Biot Number: ", Bi)
 # Sphere Temperature Profiles
 #------------------------------------------------------------------------------
@@ -67,14 +70,14 @@ thetaIn=Ti-Tinf
 b = 2   # shape factor where 2 sphere, 1 cylinder, 0 slab
 
 # surface temperature where ro for outer surface
-thetaRo = theta(rs, b, z, Bi, Fo)   # dimensionless temperature profile
+thetaRo,rts = theta(rs, b, z, Bi, Fo)   # dimensionless temperature profile
 T_o = Tinf + thetaRo*(Ti-Tinf)      # convert theta to temperature in Kelvin, K
 
 # center temperature where r for center
-thetaR = theta(rc, b, z, Bi, Fo)    # dimensionless temperature profile
+thetaR, = theta(rc, b, z, Bi, Fo)    # dimensionless temperature profile
 T_r = Tinf + thetaR*(Ti-Tinf)       # convert theta to temperature in Kelvin, K
 
-thetaMid =theta(0.5, b, z, Bi, Fo)    # dimensionless temperature profile
+thetaMid, =theta(0.5, b, z, Bi, Fo)    # dimensionless temperature profile
 T_rMid = Tinf + thetaR*(Ti-Tinf)       # convert theta to temperature in Kelvin, K
 theta_profiles = np.zeros((len(thetaRo), 3))
 theta_profiles[:,0] = thetaRo  # Surface temperature
@@ -92,13 +95,25 @@ thetaRTime=np.zeros((nDiscrR, nDiscrR, len(t)))
 
 thetaRadius=np.zeros((len(rr), len(t)))
 for ii in range(len(rr)):
-     thetaRadius[ii,:] = theta(rr[ii]/ro, b, z, Bi, Fo) 
+     thetaRadius[ii,:], = theta(rr[ii]/ro, b, z, Bi, Fo) 
 
 for ii in range(rr2.shape[1]):
     for jj in range(rr2.shape[0]):
         thetaRTime[jj,ii,:] = np.array([np.interp(rr2[jj,ii], rr, thetaRadius[:,t]) 
                                 for t in range(thetaRadius.shape[1])])
+
+
 timeSel=250
+
+thetaLump, BiLump, FoLump=thetaLumped(ro, b, h,kw,alpha,t)
+power=np.zeros(len(t))
+energy=np.zeros(len(t))
+energyRatio=np.zeros(len(t))
+energyLumped=np.zeros(len(t))    
+for ii in range(len(t)):
+    energy[ii],power=energyTransient(h,Sup,thetaRo*thetaIn[+Tinf,Tinf,dt)
+    energyLumped[ii]=energyTransientLumped(rhow*cpw*Vol,Ti,thetaLump[ii]*thetaIn+Tinf)
+    energyRatio[ii]=energy[ii]/energyLumped[ii]
 
 ccMin=np.min((thetaRTime[:,:,:])*thetaIn+Tinf)
 ccMax=np.max((thetaRTime[:,:,:])*thetaIn+Tinf)
@@ -131,6 +146,19 @@ fig.add_trace(
     row=1, col=2
 )
 
+fig.add_trace(
+    go.Scatter(x=rr, y=np.ones(rr.shape)*thetaLump[timeSel]*thetaIn+Tinf, 
+               mode='lines', name='Temperature Profile'),
+    row=1, col=2
+)
+
+fig.add_trace(
+    go.Scatter(x=rr, y=np.ones(rr.shape)*Tinf, 
+               mode='lines', name='Temperature Profile'),
+    row=1, col=2
+)
+
+
 # Add time evolution plot at different radius
 for ii in range(3):
     
@@ -140,6 +168,11 @@ for ii in range(3):
         row=2, col=2
     )
 
+fig.add_trace(
+        go.Scatter(x=t, y=theta_profiles[:,ii]/theta_profiles[:,ii]*Tinf, 
+                mode='lines', name='Ambient Temperature'),
+        row=2, col=2
+    )
 
 #slider_steps=pltSphere.createSliderSteps(t, thetaRTime, thetaRo,thetaRadius)
 
@@ -157,10 +190,10 @@ for j in range(len(t)):
                 np.ones(X.shape)*thetaRo[j]*thetaIn+Tinf  # Keep time evolution plot static
             ],
             # Update temperature profile scatter plot
-            "y": [Y*0.0, Y, thetaRadius[:,j]*thetaIn+Tinf,  # For the temperature profile plot
-                 thetaRo*thetaIn+Tinf,thetaR*thetaIn+Tinf ,thetaMid*thetaIn+Tinf]   # Keep time evolution plot static
+            "y": [Y*0.0, Y, thetaRadius[:,j]*thetaIn+Tinf,np.ones(rr.shape)*Tinf,np.ones(rr.shape)*thetaLump[j]*thetaIn+Tinf,  # For the temperature profile plot
+                 thetaRo*thetaIn+Tinf,thetaR*thetaIn+Tinf ,thetaMid*thetaIn+Tinf, theta_profiles[:,ii]/theta_profiles[:,ii]*Tinf ]   # Keep time evolution plot static
         }, {
-            "title": f"Temperature Distribution - Time Step: {j}"
+            "title": f"Temperature Distribution - Time Step: {j} - Energy [J] : {energy[j]:.2f} E/E_L: {energyRatio[j]:.2f}"
         }]
     })
 
@@ -179,12 +212,12 @@ fig.update_layout(
         range=[t[0], t[-1]],
     ),
     yaxis2=dict(
-        title="Temperature -x [°C]",
+        title="Temperature (t) [°C]",
         range=[ccMin, ccMax],  # Or use [ccMin, ccMax] for data-specific range
     ),
     
     # Keep existing axes settings for time evolution subplot
-    yaxis1=dict(title="Temperature [°C]", range=[ccMin, ccMax])
+    yaxis1=dict(title="Temperature (r) [°C]", range=[ccMin, ccMax])
 )
 
 

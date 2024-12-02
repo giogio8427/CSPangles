@@ -12,6 +12,7 @@ References:
 
 import numpy as np
 import scipy.special as sp
+from scipy import integrate
 from funcRoots import roots
 
 # First and Second Terms of the Theta Function
@@ -70,9 +71,9 @@ def theta(r, b, z, Bi, Fo):
         dTheta_o = funcCn(rts[i], b)*np.exp(-rts[i]**2 * Fo)*funcDn(r, rts[i], b)
         theta = theta + dTheta_o
         
-    return theta    # theta temperature profile evaluated at r
+    return theta,rts    # theta temperature profile evaluated at r
 
-def thetaLumped(r, b, h,k,alpha,t):
+def thetaLumped(r, b, h,k,alpha,time):
     """
     Dimensionless temperature for analytical solution of 1D transient heat
     conduction for a solid sphere, cylinder, or slab.
@@ -89,6 +90,24 @@ def thetaLumped(r, b, h,k,alpha,t):
     elif b==0:
         Lc=r/2.0
     Bi=h*Lc/k
-    Fo=alpha*t/(Lc**2)
+    Fo=alpha*time/(Lc**2)
     thetaLumped=np.exp(-Bi*Fo)
     return thetaLumped, Bi, Fo    # theta temperature profile evaluated at r
+
+
+def energyTransient(h,sup,Tout,Tinf,dt,tin,tfin):
+    power=h*sup*(Tout-Tinf)
+    energy=integrate.simpson(power, dx=dt, axis=-1)
+    return energy, power
+
+def energyTransient2(zn,R,k):
+    S=4.0*np.pi*R**2
+    ee=k*S*(zn*(np.cos(zn*R)/R)-(np.sin(zn*R)/R))/(R**2)
+    energy=np.sum(ee)
+    return energy
+
+def energyTransientLumped(thermCap,TempIn,TempFin):  
+    energyLumped=thermCap*(TempFin-TempIn)
+    return energyLumped
+
+    
