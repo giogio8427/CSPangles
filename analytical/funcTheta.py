@@ -95,15 +95,14 @@ def thetaLumped(r, b, h,k,alpha,time):
     return thetaLumped, Bi, Fo    # theta temperature profile evaluated at r
 
 
-def energyTransient(h,sup,Tout,Tinf,dt,tin,tfin):
-    power=h*sup*(Tout-Tinf)
-    energy=integrate.simpson(power, dx=dt, axis=-1)
-    return energy, power
-
-def energyTransient2(zn,R,k):
-    S=4.0*np.pi*R**2
-    ee=k*S*(zn*(np.cos(zn*R)/R)-(np.sin(zn*R)/R))/(R**2)
-    energy=np.sum(ee)
+def energyTransient(volThermalCapacity,thDiff,t,zn,R,Ti,Tinf):
+    V=4./3.*np.pi*R**3.
+    Fou=thDiff*t/R**2.
+    C=volThermalCapacity
+    A=4*(np.sin(zn)-zn*np.cos(zn))/(2.*zn-np.sin(2.*zn))*np.exp(-zn**2.*Fou)
+    B=zn/R
+    ee= V-np.sum(4.*np.pi*A*(-R/(B**2.)*np.cos(B*R)+1./(B**3.)*np.sin(B*R)))
+    energy=C*ee*(Tinf-Ti)
     return energy
 
 def energyTransientLumped(thermCap,TempIn,TempFin):  

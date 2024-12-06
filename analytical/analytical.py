@@ -74,10 +74,10 @@ thetaRo,rts = theta(rs, b, z, Bi, Fo)   # dimensionless temperature profile
 T_o = Tinf + thetaRo*(Ti-Tinf)      # convert theta to temperature in Kelvin, K
 
 # center temperature where r for center
-thetaR, = theta(rc, b, z, Bi, Fo)    # dimensionless temperature profile
+thetaR,temp = theta(rc, b, z, Bi, Fo)    # dimensionless temperature profile
 T_r = Tinf + thetaR*(Ti-Tinf)       # convert theta to temperature in Kelvin, K
 
-thetaMid, =theta(0.5, b, z, Bi, Fo)    # dimensionless temperature profile
+thetaMid,temp =theta(0.5, b, z, Bi, Fo)    # dimensionless temperature profile
 T_rMid = Tinf + thetaR*(Ti-Tinf)       # convert theta to temperature in Kelvin, K
 theta_profiles = np.zeros((len(thetaRo), 3))
 theta_profiles[:,0] = thetaRo  # Surface temperature
@@ -95,7 +95,7 @@ thetaRTime=np.zeros((nDiscrR, nDiscrR, len(t)))
 
 thetaRadius=np.zeros((len(rr), len(t)))
 for ii in range(len(rr)):
-     thetaRadius[ii,:], = theta(rr[ii]/ro, b, z, Bi, Fo) 
+     thetaRadius[ii,:],temp = theta(rr[ii]/ro, b, z, Bi, Fo) 
 
 for ii in range(rr2.shape[1]):
     for jj in range(rr2.shape[0]):
@@ -111,7 +111,7 @@ energy=np.zeros(len(t))
 energyRatio=np.zeros(len(t))
 energyLumped=np.zeros(len(t))    
 for ii in range(len(t)):
-    energy[ii],power=energyTransient(h,Sup,thetaRo*thetaIn[+Tinf,Tinf,dt)
+    energy[ii]=energyTransient(rhow*cpw,alpha,t[ii],rts,ro,Ti,Tinf)
     energyLumped[ii]=energyTransientLumped(rhow*cpw*Vol,Ti,thetaLump[ii]*thetaIn+Tinf)
     energyRatio[ii]=energy[ii]/energyLumped[ii]
 
@@ -182,7 +182,7 @@ slider_steps = []
 for j in range(len(t)):
     slider_steps.append({
         "method": "update",
-        "label": str(j),
+        "label": str(t[j]) + " sec.",
         "args": [{
             # Update surface colors for both spheres
             "surfacecolor": [
@@ -193,7 +193,7 @@ for j in range(len(t)):
             "y": [Y*0.0, Y, thetaRadius[:,j]*thetaIn+Tinf,np.ones(rr.shape)*Tinf,np.ones(rr.shape)*thetaLump[j]*thetaIn+Tinf,  # For the temperature profile plot
                  thetaRo*thetaIn+Tinf,thetaR*thetaIn+Tinf ,thetaMid*thetaIn+Tinf, theta_profiles[:,ii]/theta_profiles[:,ii]*Tinf ]   # Keep time evolution plot static
         }, {
-            "title": f"Temperature Distribution - Time Step: {j} - Energy [J] : {energy[j]:.2f} E/E_L: {energyRatio[j]:.2f}"
+            "title": f"Temperature Distribution - Time Step: {t[j] + " [sec.]"} - Energy [J] : {energy[j]:.2f} E/E_Lumped: {energyRatio[j]:.2f}"
         }]
     })
 
@@ -201,7 +201,7 @@ for j in range(len(t)):
 fig.update_layout(
     title_text="Temperature Distribution in Sphere",
     sliders=[{
-        'currentvalue': {"prefix": "Time Step: "},
+        'currentvalue': {"prefix": "Time: "},
         'steps': slider_steps,
         "active": timeSel,
         "pad": {"t": 50}
