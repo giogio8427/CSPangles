@@ -13,7 +13,7 @@ References:
 import numpy as np
 import scipy.special as sp
 from scipy import integrate
-from funcRoots import roots
+from funcRoots import roots, roots2
 
 # First and Second Terms of the Theta Function
 #------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ def funcDn(r, root, b):
 # Theta Function
 #------------------------------------------------------------------------------
 
-def theta(r, b, z, Bi, Fo):
+def theta(r, b, rts, Bi, Fo):
     """
     Dimensionless temperature for analytical solution of 1D transient heat
     conduction for a solid sphere, cylinder, or slab.
@@ -60,7 +60,8 @@ def theta(r, b, z, Bi, Fo):
     Fo = Fourier number alpha*t/L^2, (-)
     """
     
-    rts = roots(z, b, Bi)   # positive roots of the zeta, Bi equation
+    #rts = roots(z, b, Bi)   # positive roots of the zeta, Bi equation
+    #rts2=roots2(z,b,Bi)
     n = len(rts)            # number of positive roots
     
     # initial dimensionless temperature at first root
@@ -71,7 +72,7 @@ def theta(r, b, z, Bi, Fo):
         dTheta_o = funcCn(rts[i], b)*np.exp(-rts[i]**2 * Fo)*funcDn(r, rts[i], b)
         theta = theta + dTheta_o
         
-    return theta,rts    # theta temperature profile evaluated at r
+    return theta    # theta temperature profile evaluated at r
 
 def thetaLumped(r, b, h,k,alpha,time):
     """
