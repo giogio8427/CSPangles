@@ -24,7 +24,7 @@ import plotly
 import numpy as np
 import numpy.matlib
 import matplotlib.pyplot as py
-from funcTheta import theta, thetaLumped, energyTransient, energyTransientLumped
+from funcTheta import theta, thetaLumped, energyTransient, energyTransient2,energyTransientLumped
 import pltSphere
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -40,7 +40,7 @@ cpw = 835      # specific heat capacity biomass, J/(kg K)
 kw = 0.75      # thermal conductivity biomass, W/(m K)
 Ti = 500        # uniform initial temp of sphere, K
 Tinf = 20      # surrounding fluid or gas temp, K
-tmax = 100       # max time, s
+tmax = 30       # max time, s
 h = 300         # heat transfer coefficent, W/(m2 K)
 
 # Initial Calculations
@@ -118,6 +118,7 @@ energyRatio=np.zeros(len(t))
 energyLumped=np.zeros(len(t))    
 for ii in range(len(t)):
     energy[ii]=energyTransient(rhow*cpw,alpha,t[ii],rootsVal,ro,Ti,Tinf)
+    energy2=energyTransient2(h,alpha,t[ii],rootsVal,ro,Ti,Tinf)
     energyLumped[ii]=energyTransientLumped(rhow*cpw*Vol,Ti,thetaLump[ii]*thetaIn+Tinf)
     energyRatio[ii]=energy[ii]/energyLumped[ii]
 
