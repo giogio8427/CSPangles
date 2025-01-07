@@ -112,8 +112,8 @@ def energyTransientLumped(thermCap,TempIn,TempFin):
 
 def energyTransient2(hh,thDiff,t,zn,R,Ti,Tinf):
     S=4.*np.pi*R**2.
-    A=4*(np.sin(zn)-zn*np.cos(zn))/(2.*zn-np.sin(2.*zn))*np.sin(zn)/zn
+    A=4.*(np.sin(zn)-zn*np.cos(zn))/(2.*zn-np.sin(2.*zn))*np.sin(zn)/zn
     B=(-zn**2./R**2.*thDiff)
-    energy= S*hh*(Ti-Tinf)*np.sum(A/B*(1.-B*t))
+    energy= S*hh*(Ti-Tinf)*np.sum(A/B*(1.-np.exp(B*t)))
 
     return energy
