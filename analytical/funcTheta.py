@@ -66,13 +66,14 @@ def theta(r, b, rts, Bi, Fo):
     
     # initial dimensionless temperature at first root
     theta = funcCn(rts[0], b)*np.exp(-rts[0]**2 * Fo)*funcDn(r, rts[0], b)
-    
+    dTheta_o_prev=1.e9
     # summation of theta for the remaining roots
     for i in range(1, n):
         dTheta_o = funcCn(rts[i], b)*np.exp(-rts[i]**2 * Fo)*funcDn(r, rts[i], b)
         theta = theta + dTheta_o
-        
-    return theta    # theta temperature profile evaluated at r
+        dTheta_o_min=np.minimum(dTheta_o, dTheta_o_prev)
+        dTheta_o_prev=dTheta_o
+    return theta,dTheta_o_min    # theta temperature profile evaluated at r
 
 def thetaLumped(r, b, h,k,alpha,time):
     """
@@ -93,7 +94,7 @@ def thetaLumped(r, b, h,k,alpha,time):
     Bi=h*Lc/k
     Fo=alpha*time/(Lc**2)
     thetaLumped=np.exp(-Bi*Fo)
-    return thetaLumped, Bi, Fo    # theta temperature profile evaluated at r
+    return thetaLumped, Bi, Fo,Lc    # theta temperature profile evaluated at r
 
 
 def energyTransient(volThermalCapacity,thDiff,t,zn,R,Ti,Tinf):

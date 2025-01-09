@@ -29,35 +29,102 @@ import pltSphere
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from funcRoots import roots
+import sys
+from tabulate import tabulate
 py.close('all')
 
 # Parameters from Papadikis 2010a Table 1
 #------------------------------------------------------------------------------
 
-rhow = 2458      # density of biomass, 700 kg/m3
-d = 0.02    # particle diameter for 350 um size, m
-cpw = 835      # specific heat capacity biomass, J/(kg K)
-kw = 0.75      # thermal conductivity biomass, W/(m K)
-Ti = 500        # uniform initial temp of sphere, °C
-Tinf = 20      # surrounding fluid or gas temp, °C
-tmax = 100       # max time, s
-h = 300         # heat transfer coefficent, W/(m2 K)
+def get_input(prompt, default, change=False):
+    if change:
+        user_input = input(f"{prompt} [{default}]: ")
+        return float(user_input) if user_input else default
+    else:
+        return default
+
+defScreen = """
++-------------------------------------------------------------+
+|                       DEFAULT VALUES                        |
++-------------------------------------------------------------+
+| 1. Geometry  (sphere, cyliinder, slab):         sphere      |
+| 1. Density [kg/m3]:                             2458        |
+| 2. Particle diameter/thickness [m]:             0.02        |
+| 3. Specific heat capacity [J/(kg K)]:            835        |
+| 4. Thermal conductivity            [W/(m K)]:   0.75        |
+| 5. Uniform initial temperature of sphere [°C]:  500         |
+| 6. Surrounding fluid or gas temperature [°C]:   20          |
+| 7. Maximum time [s]:                            100         |
+| 8. Heat transfer coefficient [W/(m2 K)]:        300         |
+| 9. Number of discretization radius:             100         |
+| 10. Slider step time [s]:                       1           |
++-------------------------------------------------------------+
+"""
+inputsDefault = {
+    1: ("Geometry", "sphere"),
+    2: ("Density [kg/m3]", 2458),
+    3: ("Particle diameter [m]", 0.02),
+    4: ("Specific heat capacity [J/(kg K)]", 835.),
+    5: ("Thermal conductivity [W/(m K)]", 0.75),
+    6: ("Uniform initial temperature of sphere [°C]", 500.),
+    7: ("Surrounding fluid or gas temperature [°C]", 20.),
+    8: ("Maximum time [s]", 100),
+    9: ("Heat transfer coefficient [W/(m2 K)]", 300.),
+    10: ("Number of discretization radius", 100),
+    11: ("Slider step time [s]", 1)
+    }
+
+print(defScreen)
+inputs=inputsDefault
+change_input=100
+
+while (change_input!=0):
+    geom=inputs[1][1]
+    rhow = inputs[2][1]
+    d = inputs[3][1]
+    cpw = inputs[4][1]
+    kw = inputs[5][1]
+    Ti = inputs[6][1]
+    Tinf = inputs[7][1]
+    tmax = inputs[8][1]
+    h = inputs[9][1]
+    nDiscrR = int(inputs[10][1])
+    dt_slider = inputs[11][1]
+
+    for key, value in inputs.items():
+        print(f"{key}: {value[0]} [{value[1]}]")
+
+    change_input = int(input("Enter the number of the input you want to change (or 0 to keep all defaults): ").strip())
+
+    if change_input in inputs:
+        prompt, default = inputs[change_input]
+        new_value = get_input(prompt, default, True)
+        inputs[change_input] = (prompt, new_value)
+
+print("Running simulation with the following parameters:")
+print("""
++-------------------------------------------------------------+
+|                       CURRENT PARAMETERS                    |
++-------------------------------------------------------------+
+      """)
+for key, value in inputs.items():
+    print(f"{key}. {value[0]}: {value[1]}")
 
 # Initial Calculations
 #------------------------------------------------------------------------------
 
+cMap="Hot"                          # color map for plotly
+
 ro = (d/2)                          # radius of sphere (a.k.a outer radius), m
 rs = ro/ro                          # dimensionless surface radius, (-)
-rc = 1e-12/ro                       # dimensionless center radius, (-)
-nDiscrR=100                          # number of discretization radius
+rc = 1.e-12/ro                      # dimensionless center radius, (-)
+
 rr=np.linspace(1.0e-9,ro,nDiscrR)       # discretization radius
 alpha = kw/(rhow*cpw)               # thermal diffusivity biomass, m^2/s
 dt=0.1
 t = np.arange(0, tmax+dt, dt) # time range for simulation, s
 z = np.arange(0, 2500, 0.1)         # range to evaluate the zeta, Bi equation
 z[0] = 1e-12                        # prevent divide by zero warning
-dt_slider=1
-cMap="Hot"
 
 nSliderSteps=int(dt_slider/dt)    
 arraySliderSteps=range(0,len(t),nSliderSteps)
@@ -67,67 +134,133 @@ Fo = (alpha * t) / (ro**2)          # Fourier number, (-)
 
 Vol=(4.0/3.0)*np.pi*ro**3
 Sup=4.0*np.pi*ro**2
-print("Biot Number: ", Bi)
+
 # Sphere Temperature Profiles
 #------------------------------------------------------------------------------
 
 thetaIn=Ti-Tinf
-
-b = 2   # shape factor where 2 sphere, 1 cylinder, 0 slab
+if geom=="sphere":
+    b = 2   # shape factor where 2 sphere, 1 cylinder, 0 slab
+elif geom=="cylinder":
+    b = 1   # shape factor where 2 sphere, 1 cylinder, 0 slab   
+elif geom=="slab":
+    b = 0
+else:
+    print("Invalid geometry- Default to sphere")
+    b=2
 
 rootsVal=roots(z, b, Bi)
 
-
 # surface temperature where ro for outer surface
-thetaRo = theta(rs, b, rootsVal, Bi, Fo)   # dimensionless temperature profile
+thetaRo, temp = theta(rs, b, rootsVal, Bi, Fo)   # dimensionless temperature profile
+thetaRo[0]=1.
 T_o = Tinf + thetaRo*(Ti-Tinf)      # convert theta to temperature in Kelvin, K
 
 # center temperature where r for center
-thetaR = theta(rc, b, rootsVal, Bi, Fo)    # dimensionless temperature profile
+thetaR, temp = theta(rc, b, rootsVal, Bi, Fo)    # dimensionless temperature profile
+thetaR[0]=1.
 T_r = Tinf + thetaR*(Ti-Tinf)       # convert theta to temperature in Kelvin, K
 
-thetaMid =theta(0.5, b, rootsVal, Bi, Fo)    # dimensionless temperature profile
+thetaMid, temp =theta(0.5, b, rootsVal, Bi, Fo)    # dimensionless temperature profile
+thetaMid[0]=1.
 T_rMid = Tinf + thetaR*(Ti-Tinf)       # convert theta to temperature in Kelvin, K
+
 theta_profiles = np.zeros((len(thetaRo), 3))
 theta_profiles[:,0] = thetaRo  # Surface temperature
 theta_profiles[:,1] = thetaR   # Center temperature
 theta_profiles[:,2] = thetaMid # Middle point temperature
-
-# Discretized sphere temperature
-ii=0
-
-X,Y,Z=pltSphere.sphereCoord(radius=ro, resolution=nDiscrR)
-X1,Y1,Z1=pltSphere.circleCoord(rr)
-
-rr2=(X**2.+Z**2.)**0.5
-rrArray=np.zeros(nDiscrR)
 thetaRTime=np.zeros((nDiscrR, nDiscrR, len(t)))
- 
-
 thetaRadius=np.zeros((len(rr), len(t)))
-for ii in range(len(rr)):
-     thetaRadius[ii,:] = theta(rr[ii]/ro, b, rootsVal, Bi, Fo) 
+dThetaMin=np.zeros((len(rr), len(t)))
+for ii in range(1,len(rr),1):
+     thetaRadius[ii,:],dThetaMin[ii,:] = theta(rr[ii]/ro, b, rootsVal, Bi, Fo) 
 
 for ii in range(len(rr)):
     thetaRTime[:,ii,:]=thetaRadius[:,:]
 
-thetaLump, BiLump, FoLump=thetaLumped(ro, b, h,kw,alpha,t)
+# Lumped Capacitance Solution
+thetaLump, BiLump, FoLump, Lc=thetaLumped(ro, b, h,kw,alpha,t)
+
+# Energy Calculation
 power=np.zeros(len(t))
 energy=np.zeros(len(t))
 energyRatio=np.zeros(len(t))
-energyLumped=np.zeros(len(t))    
+energyLumped=np.zeros(len(t))  
+energyMax=cpw*rhow*Vol*thetaIn
+energy_enMax_ratio=np.zeros(len(t))  
 for ii in range(len(t)):
     #energy[ii]=energyTransient(rhow*cpw,alpha,t[ii],rootsVal,ro,Ti,Tinf)
     energy[ii]=energyTransient2(h,alpha,t[ii],rootsVal,ro,Ti,Tinf)
     energyLumped[ii]=energyTransientLumped(rhow*cpw*Vol,Ti,thetaLump[ii]*thetaIn+Tinf)
     energyRatio[ii]=energy[ii]/energyLumped[ii]
+energy_enMax_ratio=energy/energyMax
+
+print("""
++-------------------------------------------------------------+
+|                       SIMULATION PARAMETERS                 |
++-------------------------------------------------------------+
+      """)
+simPar = {
+    1: ("n° Biot, [-]", Bi),
+    2: ("n° Fourier max., [-]", np.max(Fo)),
+    3: ("n° Biot (Lumped Cap.) [-]", BiLump),
+    4: ("n° Fourier max.(Lumped Cap.) [-]", np.max(FoLump)),
+    5: ("Characteristic Length (Lumped Cap.) [m]", Lc)
+    }
+
+for key, value in simPar.items():
+    print(f"{key}. {value[0]}: {value[1]}")
+
+print("""
++-------------------------------------------------------------+
+|                       OVERALL RESULTS                       |
++-------------------------------------------------------------+
+      """)
+overRes={
+    1: ("Energy, [J]", energy[-1]),
+    2: ("[Max,Min] Temperature @t=tmax, [°C]", np.max(thetaRTime[:,:,-1]*(Ti-Tinf)+Tinf), np.min(thetaRTime[:,:,-1]*(Ti-Tinf)+Tinf)),
+    3: ("Energy (Lumped Cap.), [J]", energyLumped[-1]),
+    4: ("Temperaure @t=tmax (Lumped Cap.), [°C]", (thetaLump[-1]*(Ti-Tinf)+Tinf)),
+    5: ("Energy Ratio (compared to Lumped Cap.)", energyRatio[-1]),
+    6: ("Energy/Energy_max [-]", energy_enMax_ratio[-1])
+    }
+
+for key, value in overRes.items():
+    if len(value) == 2:
+        print(f"{key}. {value[0]}: {value[1]}")
+    elif len(value) == 3:
+        print(f"{key}. {value[0]}: [{value[1]}, {value[2]}]")
+
+# Table with results
+print("""
++-------------------------------------------------------------+
+|                       TIME SERIS RESULTS                    |
++-------------------------------------------------------------+
+      """)
+
+# Print table with results
+table_data = []
+for i in range(0,len(t),nSliderSteps):
+    table_data.append([t[i], Fo[i], thetaR[i], thetaRo[i], T_r[i], T_o[i], energy[i], energy_enMax_ratio[i], np.max(dThetaMin[:,i])])
+    headers = ["time [s]", "Fou [-]", "theta* center [-]", "theta* outer [-]", "Tcenter [°C]", "Touter [°C]", "Energy [J]", "En./En.max [-]", "dThetaMax [-]"]
+print(tabulate(table_data, headers=headers, floatfmt=".4f"))
+
+
+#region PLOT RESULTS
+# Discretized sphere temperature
+ii=0
+X,Y,Z=pltSphere.sphereCoord(radius=ro, resolution=nDiscrR)
+X1,Y1,Z1=pltSphere.circleCoord(rr)
+
+rr2=(X**2.+Z**2.)**0.5
+rrArray=np.zeros(nDiscrR)
+
 
 ccMin=np.min((thetaRTime[:,:,:])*thetaIn+Tinf)
 ccMax=np.max((thetaRTime[:,:,:])*thetaIn+Tinf)
 
 ccMinLump=np.min((thetaLump[:])*thetaIn+Tinf)
 ccMaxLump=np.max((thetaLump[:])*thetaIn+Tinf)
-
 
 tt=pltSphere.plotCircle(X1,Y1,Z1, clrMatrix=thetaRTime[:,:,timeSel]*thetaIn+Tinf, 
                          ccLim=(ccMin, ccMax), colorMap=cMap)
@@ -139,7 +272,6 @@ tt3=pltSphere.plotSphere(X,Y*0.0,Z, clrMatrix=np.ones(X.shape)*thetaLump[timeSel
 tt4=pltSphere.plotSphere(X,Y,Z, clrMatrix=np.ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, ccLim=(ccMinLump, ccMaxLump),colorMap=cMap)
 
 fig = go.Figure(data = tt + tt2 + tt3 + tt4)
-#fig.add_trace(tt+tt2)
 
 fig = make_subplots(
     rows=2, cols=2,
@@ -175,7 +307,6 @@ for trace in tt4:
     fig.add_trace(trace, row=2, col=1)
 
 # Add temperature profile plot
-
 rrTot=np.concatenate((np.flipud(-rr) ,rr))
 thetaRadiusTot=np.concatenate((np.flipud(thetaRadius),thetaRadius))
 
@@ -278,88 +409,5 @@ fig.update_layout(
 )
 
 fig.show()
-
-# Cylinder Temperature Profiles
-#------------------------------------------------------------------------------
-
-b = 1   # shape factor where 2 sphere, 1 cylinder, 0 slab
-
-# surface temperature where ro for outer surface
-thetaRo = theta(rs, b, z, Bi, Fo)   # dimensionless temperature profile
-To_cyl = Tinf + thetaRo*(Ti-Tinf)   # convert theta to temperature in Kelvin, K
-
-# center temperature where r for center
-thetaR = theta(rc, b, z, Bi, Fo)    # dimensionless temperature profile
-Tr_cyl = Tinf + thetaR*(Ti-Tinf)    # convert theta to temperature in Kelvin, K
-
-# Slab Temperature Profile
-#------------------------------------------------------------------------------
-
-b = 0   # shape factor where 2 sphere, 1 cylinder, 0 slab
-
-# surface temperature where ro for outer surface
-thetaRo = theta(rs, b, z, Bi, Fo)   # dimensionless temperature profile
-To_slab = Tinf + thetaRo*(Ti-Tinf)  # convert theta to temperature in Kelvin, K
-
-# center temperature where r for center
-thetaR = theta(rc, b, z, Bi, Fo)    # dimensionless temperature profile
-Tr_slab = Tinf + thetaR*(Ti-Tinf)   # convert theta to temperature in Kelvin, K
-
-# Plot Results
-#------------------------------------------------------------------------------
-
-# configure y-axis based on cooling or heating simulation
-if Ti > Tinf:
-    # for a cooling process where Ti=773K and Tinf=300K
-    Th = Ti
-    ylim =[Ti+20, Tinf-20]
-else:
-    # for a heating process where Ti=300K and Tinf=773K
-    Th = Tinf
-    ylimRange = [Ti-20, Tinf+20]
-    
-py.figure(1)
-py.plot(t, T_o, '-r', lw=2, label='surface')
-py.plot(t, T_r, '--r', lw=2, label='center')
-py.title('Sphere')
-py.ylabel('Temperature (K)')
-py.xlabel('Time (s)')
-py.ylim(ylimRange)
-py.xlim([0, tmax])
-py.axhline(y=Th, color='k', linestyle='--', label=r'T$_\infty$')
-py.rcParams['xtick.major.pad'] = 6
-py.rcParams['ytick.major.pad'] = 6
-py.legend(loc='best', numpoints=1)
-py.grid()
-py.show()
-
-py.figure(2)
-py.plot(t, To_cyl, '-b', lw=2, label='surface')
-py.plot(t, Tr_cyl, '--b', lw=2, label='center')
-py.title('Cylinder')
-py.ylabel('Temperature (K)')
-py.xlabel('Time (s)')
-py.ylim(ylimRange)
-py.xlim([0, tmax])
-py.axhline(y=Th, color='k', linestyle='--', label=r'T$_\infty$')
-py.rcParams['xtick.major.pad'] = 6
-py.rcParams['ytick.major.pad'] = 6
-py.legend(loc='best', numpoints=1)
-py.grid()
-py.show()
-
-py.figure(3)
-py.plot(t, To_slab, '-g', lw=2, label='surface')
-py.plot(t, Tr_slab, '--g', lw=2, label='center')
-py.title('Slab')
-py.ylabel('Temperature (K)')
-py.xlabel('Time (s)')
-py.ylim(ylimRange)
-py.xlim([0, tmax])
-py.axhline(y=Th, color='k', linestyle='--', label=r'T$_\infty$')
-py.rcParams['xtick.major.pad'] = 6
-py.rcParams['ytick.major.pad'] = 6
-py.legend(loc='best', numpoints=1)
-py.grid()
-py.show()
-
+#endregion
+endSim=0
