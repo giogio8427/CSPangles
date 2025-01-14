@@ -172,7 +172,7 @@ theta_profiles[:,2] = thetaMid # Middle point temperature
 thetaRTime=np.zeros((nDiscrR, nDiscrR, len(t)))
 thetaRadius=np.zeros((len(rr), len(t)))
 dThetaMin=np.zeros((len(rr), len(t)))
-for ii in range(1,len(rr),1):
+for ii in range(0,len(rr),1):
      thetaRadius[ii,:],dThetaMin[ii,:] = theta(rr[ii]/ro, b, rootsVal, Bi, Fo) 
 
 for ii in range(len(rr)):
@@ -372,7 +372,7 @@ for j in arraySliderSteps:
             "y": [Y*0.0, Y, Y*0.0, Y,thetaRadiusTot[:,j]*thetaIn+Tinf,np.repeat(thetaLump[j],2)*thetaIn+Tinf,np.repeat(Tinf,2),  # For the temperature profile plot
                  thetaRo*thetaIn+Tinf,thetaR*thetaIn+Tinf ,thetaMid*thetaIn+Tinf, thetaLump*thetaIn+Tinf, np.repeat(Tinf,2)]   # Keep time evolution plot static
         }, {
-            "title": f"Temperature Distribution - Time Step: {t[j]} - Energy [J] : {energy[j]:.2f} E/E_Lumped: {energyRatio[j]:.3f}"
+            "title": f"Temperature Distribution - Time Step: {t[j]} - Energy [J] : {energy[j]:.2f} E/E_Lumped: {energyRatio[j]:.3f}",
         }]
     })
 
@@ -405,7 +405,7 @@ fig.update_layout(
     # Keep existing axes settings for time evolution subplot
     yaxis1=dict(title="Temperature [°C]", range=[np.min((ccMin,Tinf)), np.max((ccMax,Tinf))]),
     xaxis1=dict(title="Radius [m]", range = [-ro, ro]),
-    margin=dict(l=0, r=0, t=70, b=0)  # Minimize margins
+    margin=dict(l=0, r=0, t=100, b=0)  # Minimize margins
 )
 
 fig.show()
