@@ -111,10 +111,21 @@ def energyTransientLumped(thermCap,TempIn,TempFin):
     energyLumped=thermCap*(TempFin-TempIn)
     return energyLumped
 
-def energyTransient2(hh,thDiff,t,zn,R,Ti,Tinf):
-    S=4.*np.pi*R**2.
-    A=4.*(np.sin(zn)-zn*np.cos(zn))/(2.*zn-np.sin(2.*zn))*np.sin(zn)/zn
+def energyTransient2(hh,thDiff,t,zn,R,Ti,Tinf,geometry):
+    L=1.0
     B=(-zn**2./R**2.*thDiff)
+    if geometry=='sphere':
+        S=4.*np.pi*R**2.
+        C=4.*(np.sin(zn)-zn*np.cos(zn))/(2.*zn-np.sin(2.*zn))
+        A=C*np.sin(zn)/zn
+    elif geometry=='slab':
+        S=L*L*2.
+        C=4.*(np.sin(zn))/(2.*zn+np.sin(2.*zn))
+        A=C*np.cos(zn)
+    elif geometry=='cylinder':
+        S=2.*np.pi*R*L
+        C=2./zn*(sp.j1(zn)/(sp.j0(zn)**2+sp.j1(zn)**2))
+        A=C*sp.j0(zn)
+   
     energy= S*hh*(Ti-Tinf)*np.sum(A/B*(1.-np.exp(B*t)))
-
     return energy
