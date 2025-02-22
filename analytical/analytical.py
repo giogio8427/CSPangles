@@ -20,18 +20,13 @@ References:
 
 # Modules
 #------------------------------------------------------------------------------
-import plotly
-import numpy as np
-import numpy.matlib
-import matplotlib.pyplot as py
-from funcTheta import theta, thetaLumped, energyTransient, energyTransient2,energyTransientLumped
+from  numpy import linspace, zeros, arange, pi, array, ones, flipud, concatenate, max, min, repeat
+from funcTheta import theta, thetaLumped, energyTransient2,energyTransientLumped
 import pltSphere
-import plotly.graph_objects as go
+from plotly.graph_objects import Figure,Scatter
 from plotly.subplots import make_subplots
 from funcRoots import roots
-import sys
 from tabulate import tabulate
-py.close('all')
 
 # Parameters from Papadikis 2010a Table 1
 #------------------------------------------------------------------------------
@@ -50,12 +45,12 @@ defScreen = """
 +-------------------------------------------------------------+
 |                       DEFAULT VALUES                        |
 +-------------------------------------------------------------+
-| 1. Geometry  (sphere, cyliinder, slab):         sphere      |
+| 1. Geometry  (sphere, cylinder, slab):         sphere       |
 | 1. Density [kg/m3]:                             2458        |
 | 2. Particle diameter/thickness [m]:             0.02        |
 | 3. Specific heat capacity [J/(kg K)]:            835        |
 | 4. Thermal conductivity            [W/(m K)]:   0.75        |
-| 5. Uniform initial temperature of sphere [°C]:  500         |
+| 5. Uniform initial temperature           [°C]:  500         |
 | 6. Surrounding fluid or gas temperature [°C]:   20          |
 | 7. Maximum time [s]:                            100         |
 | 8. Heat transfer coefficient [W/(m2 K)]:        300         |
@@ -65,11 +60,11 @@ defScreen = """
 """
 inputsDefault = {
     1: ("Geometry", "slab"),
-    2: ("Density [kg/m3]", 2458),
+    2: ("Density [kg/m3]", 2458.),
     3: ("Particle diameter [m]", 0.02),
     4: ("Specific heat capacity [J/(kg K)]", 835.),
     5: ("Thermal conductivity [W/(m K)]", 0.75),
-    6: ("Uniform initial temperature of sphere [°C]", 500.),
+    6: ("Uniform initial temperature [°C]", 500.),
     7: ("Surrounding fluid or gas temperature [°C]", 20.),
     8: ("Maximum time [s]", 100),
     9: ("Heat transfer coefficient [W/(m2 K)]", 300.),
@@ -125,17 +120,15 @@ while (newSim=='y'):
     # Initial Calculations
     #------------------------------------------------------------------------------
 
-    cMap="Hot"                          # color map for plotly
-
     ro = (d/2)                          # radius of sphere (a.k.a outer radius), m
     rs = ro/ro                          # dimensionless surface radius, (-)
     rc = 1.e-12/ro                      # dimensionless center radius, (-)
 
-    rr=np.linspace(1.0e-9,ro,nDiscrR)       # discretization radius
+    rr=linspace(1.0e-9,ro,nDiscrR)       # discretization radius
     alpha = kw/(rhow*cpw)               # thermal diffusivity biomass, m^2/s
     dt=0.1
-    t = np.arange(0, tmax+dt, dt) # time range for simulation, s
-    z = np.arange(0, 2500, 0.1)         # range to evaluate the zeta, Bi equation
+    t = arange(0, tmax+dt, dt) # time range for simulation, s
+    z = arange(0, 2500, 0.1)         # range to evaluate the zeta, Bi equation
     z[0] = 1e-12                        # prevent divide by zero warning
 
     nSliderSteps=int(dt_slider/dt)    
@@ -145,26 +138,37 @@ while (newSim=='y'):
     Fo = (alpha * t) / (ro**2)          # Fourier number, (-)
 
     L=1.0
-
-    # Sphere Temperature Profiles
+    cMap="Hot"                          # color map for plotly
+    
+    # Temperature Profiles
     #------------------------------------------------------------------------------
 
     thetaIn=Ti-Tinf
-    if geom=="sphere":
-        b = 2   # shape factor where 2 sphere, 1 cylinder, 0 slab
-        Vol=(4.0/3.0)*np.pi*ro**3
-        Sup=4.0*np.pi*ro**2
-    elif geom=="cylinder":
+
+    if geom=="cylinder":
         b = 1   # shape factor where 2 sphere, 1 cylinder, 0 slab
-        Vol=np.pi*ro**2.0*L
-        Sup=2.*np.pi*ro*L   
+        Vol=pi*ro**2.0*L
+        Sup=2.*pi*ro*L   
+        intStr="Temperature distribution of Cylinder"
+        energyStr="[J/m]"
+        thetaRTime=zeros((nDiscrR, nDiscrR, len(t)))
     elif geom=="slab":
         b = 0
         Vol=ro*L*L
         Sup=2.*L*L
+        intStr="Temperature distribution of Slab"
+        energyStr="[J/m2]"
+        thetaRTime=zeros((2*nDiscrR-1, nDiscrR, len(t)))
     else:
-        print("Invalid geometry- Default to sphere")
+        geom="sphere"
+        Vol=(4.0/3.0)*pi*ro**3
+        Sup=4.0*pi*ro**2
+        intStr="Temperature distribution of Sphere"
+        energyStr="[J]"
+        thetaRTime=zeros((nDiscrR, nDiscrR, len(t)))
         b=2
+        if geom!="sphere": print("Invalid geometry- Default to sphere")
+
 
     rootsVal=roots(z, b, Bi)
 
@@ -182,23 +186,15 @@ while (newSim=='y'):
     thetaMid[0]=1.
     T_rMid = Tinf + thetaR*(Ti-Tinf)       # convert theta to temperature in Kelvin, K
 
-    theta_profiles = np.zeros((len(thetaRo), 3))
+    theta_profiles = zeros((len(thetaRo), 3))
     theta_profiles[:,0] = thetaRo  # Surface temperature
     theta_profiles[:,1] = thetaR   # Center temperature
     theta_profiles[:,2] = thetaMid # Middle point temperature
 
-    if geom=="sphere":
-        thetaRTime=np.zeros((nDiscrR, nDiscrR, len(t)))
-        energyStr="[J]"
-    elif geom=="slab":
-        thetaRTime=np.zeros((2*nDiscrR-1, nDiscrR, len(t)))
-        energyStr="[J/m]"
-    elif geom=="cylinder":
-        thetaRTime=np.zeros((nDiscrR, nDiscrR, len(t)))
-        energyStr="[J/m2]"
-    
-    thetaRadius=np.zeros((len(rr), len(t)))
-    dThetaMin=np.zeros((len(rr), len(t)))
+
+
+    thetaRadius=zeros((len(rr), len(t)))
+    dThetaMin=zeros((len(rr), len(t)))
     for ii in range(0,len(rr),1):
         thetaRadius[ii,:],dThetaMin[ii,:] = theta(rr[ii]/ro, b, rootsVal, Bi, Fo) 
 
@@ -207,7 +203,7 @@ while (newSim=='y'):
             thetaRTime[:,ii,:]=thetaRadius[:,:]
         elif geom=="slab":
             thetaRTime[nDiscrR:,ii,:]=thetaRadius[1:,:]
-            thetaRTime[0:nDiscrR,ii,:]=np.flipud(thetaRadius[:,:])
+            thetaRTime[0:nDiscrR,ii,:]=flipud(thetaRadius[:,:])
         elif geom=="cylinder":
             thetaRTime[:,ii,:]=thetaRadius[:,:]
 
@@ -215,14 +211,13 @@ while (newSim=='y'):
     thetaLump, BiLump, FoLump, Lc=thetaLumped(ro, b, h,kw,alpha,t)
 
     # Energy Calculation
-    power=np.zeros(len(t))
-    energy=np.zeros(len(t))
-    energyRatio=np.zeros(len(t))
-    energyLumped=np.zeros(len(t))  
+    power=zeros(len(t))
+    energy=zeros(len(t))
+    energyRatio=zeros(len(t))
+    energyLumped=zeros(len(t))  
     energyMax=cpw*rhow*Vol*thetaIn
-    energy_enMax_ratio=np.zeros(len(t))  
+    energy_enMax_ratio=zeros(len(t))  
     for ii in range(len(t)):
-        #energy[ii]=energyTransient(rhow*cpw,alpha,t[ii],rootsVal,ro,Ti,Tinf)
         energy[ii]=energyTransient2(h,alpha,t[ii],rootsVal,ro,Ti,Tinf,geometry=geom)
         energyLumped[ii]=energyTransientLumped(rhow*cpw*Vol,Ti,thetaLump[ii]*thetaIn+Tinf)
         energyRatio[ii]=energy[ii]/energyLumped[ii]
@@ -235,9 +230,9 @@ while (newSim=='y'):
         """)
     simPar = {
         1: ("n° Biot, [-]", Bi),
-        2: ("n° Fourier max., [-]", np.max(Fo)),
+        2: ("n° Fourier max., [-]", max(Fo)),
         3: ("n° Biot (Lumped Cap.) [-]", BiLump),
-        4: ("n° Fourier max.(Lumped Cap.) [-]", np.max(FoLump)),
+        4: ("n° Fourier max.(Lumped Cap.) [-]", max(FoLump)),
         5: ("Characteristic Length (Lumped Cap.) [m]", Lc)
         }
 
@@ -251,7 +246,7 @@ while (newSim=='y'):
         """)
     overRes={
         1: ("Energy, [J]", energy[-1]),
-        2: ("[Max,Min] Temperature @t=tmax, [°C]", np.max(thetaRTime[:,:,-1]*(Ti-Tinf)+Tinf), np.min(thetaRTime[:,:,-1]*(Ti-Tinf)+Tinf)),
+        2: ("[Max,Min] Temperature @t=tmax, [°C]", max(thetaRTime[:,:,-1]*(Ti-Tinf)+Tinf), min(thetaRTime[:,:,-1]*(Ti-Tinf)+Tinf)),
         3: ("Energy (Lumped Cap.), [J]", energyLumped[-1]),
         4: ("Temperaure @t=tmax (Lumped Cap.), [°C]", (thetaLump[-1]*(Ti-Tinf)+Tinf)),
         5: ("Energy Ratio (compared to Lumped Cap.)", energyRatio[-1]),
@@ -274,7 +269,7 @@ while (newSim=='y'):
     # Print table with results
     table_data = []
     for i in range(0,len(t),nSliderSteps):
-        table_data.append([t[i], Fo[i], thetaR[i], thetaRo[i], T_r[i], T_o[i], energy[i], energy_enMax_ratio[i], np.max(dThetaMin[:,i])])
+        table_data.append([t[i], Fo[i], thetaR[i], thetaRo[i], T_r[i], T_o[i], energy[i], energy_enMax_ratio[i], max(dThetaMin[:,i])])
         headers = ["time [s]", "Fou [-]", "theta* center [-]", "theta* outer [-]", "Tcenter [°C]", "Touter [°C]", "Energy [J]", "En./En.max [-]", "dThetaMax [-]"]
     print(tabulate(table_data, headers=headers, floatfmt=(".4f", ".4f", ".4f", ".4f", ".4f", ".4f", ".4f", ".4f", ".3e")))
 
@@ -283,16 +278,16 @@ while (newSim=='y'):
     # Discretized sphere temperature
     ii=0
 
-    rrArray=np.zeros(nDiscrR)
+    rrArray=zeros(nDiscrR)
 
 
-    ccMin=np.min((thetaRTime[:,:,:])*thetaIn+Tinf)
-    ccMax=np.max((thetaRTime[:,:,:])*thetaIn+Tinf)
+    ccMin=min((thetaRTime[:,:,:])*thetaIn+Tinf)
+    ccMax=max((thetaRTime[:,:,:])*thetaIn+Tinf)
 
-    ccMinLump=np.min((thetaLump[:])*thetaIn+Tinf)
-    ccMaxLump=np.max((thetaLump[:])*thetaIn+Tinf)
+    ccMinLump=min((thetaLump[:])*thetaIn+Tinf)
+    ccMaxLump=max((thetaLump[:])*thetaIn+Tinf)
 
-    vertices = np.array([
+    vertices = array([
         [-ro, -0.5, -0.5],
         [ro, -0.5, -0.5],
         [ro, 0.5, -0.5],
@@ -311,10 +306,10 @@ while (newSim=='y'):
         X1,Y1,Z1=pltSphere.circleCoord(rr)
         tt=pltSphere.plotCircle(X1,Y1,Z1, clrMatrix=thetaRTime[:,:,timeSel]*thetaIn+Tinf, 
                                 ccLim=(ccMin, ccMax), colorMap=cMap)
-        tt2=pltSphere.plotSphere(X,Y,Z, clrMatrix=np.ones(X.shape)*thetaRo[timeSel]*thetaIn+Tinf, ccLim=(ccMin, ccMax),colorMap=cMap)
-        tt3=pltSphere.plotSphere(X,Y*0.0,Z, clrMatrix=np.ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, 
+        tt2=pltSphere.plotSphere(X,Y,Z, clrMatrix=ones(X.shape)*thetaRo[timeSel]*thetaIn+Tinf, ccLim=(ccMin, ccMax),colorMap=cMap)
+        tt3=pltSphere.plotSphere(X,Y*0.0,Z, clrMatrix=ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, 
                                 ccLim=(ccMinLump, ccMaxLump),colorMap=cMap)
-        tt4=pltSphere.plotSphere(X,Y,Z, clrMatrix=np.ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, ccLim=(ccMinLump, ccMaxLump),colorMap=cMap)
+        tt4=pltSphere.plotSphere(X,Y,Z, clrMatrix=ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, ccLim=(ccMinLump, ccMaxLump),colorMap=cMap)
     elif geom=='slab':
       X,Y,Z=pltSphere.prismCoord(ro, resolution=nDiscrR)
       X1,Y1,Z1=pltSphere.rectCoord(rr)
@@ -322,7 +317,7 @@ while (newSim=='y'):
       tt,Xtemp,Ytemp,Ztemp=pltSphere.plotRect(X1,Y1,Z1, clrMatrix=thetaRTime[:,:,timeSel]*thetaIn+Tinf, 
                                 ccLim=(ccMin, ccMax), colorMap=cMap)
       tt2,Xtemp,Ytemp,Ztemp=pltSphere.drawRectPrismFromVertices(vertices, clrMatrix=thetaRo[timeSel]*thetaIn+Tinf,ccLim=(ccMin, ccMax),colorMap=cMap)
-      tt3,Xtemp,Ytemp,Ztemp=pltSphere.plotRect(X1,Y1,Z1, clrMatrix=np.ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, 
+      tt3,Xtemp,Ytemp,Ztemp=pltSphere.plotRect(X1,Y1,Z1, clrMatrix=ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, 
                                 ccLim=(ccMinLump, ccMaxLump),colorMap=cMap)
       tt4,Xtemp,Ytemp,Ztemp=pltSphere.drawRectPrismFromVertices(vertices, clrMatrix=thetaLump[timeSel]*thetaIn+Tinf,ccLim=(ccMinLump, ccMaxLump),colorMap=cMap) 
       YB=Ytemp  
@@ -333,14 +328,14 @@ while (newSim=='y'):
         X1,Y1,Z1=pltSphere.circleCoord(rr)
         tt=pltSphere.plotCircle(X1,Y1,Z1, clrMatrix=thetaRTime[:,:,timeSel]*thetaIn+Tinf, 
                                 ccLim=(ccMin, ccMax), colorMap=cMap)
-        tt2=pltSphere.plotSphere(X,Y,Z, clrMatrix=np.ones(X.shape)*thetaRo[timeSel]*thetaIn+Tinf, ccLim=(ccMin, ccMax),colorMap=cMap)
+        tt2=pltSphere.plotSphere(X,Y,Z, clrMatrix=ones(X.shape)*thetaRo[timeSel]*thetaIn+Tinf, ccLim=(ccMin, ccMax),colorMap=cMap)
         for trace in tt2: trace.update(visible=False)
-        tt3=pltSphere.plotSphere(X,Y*0.0,Z, clrMatrix=np.ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, 
+        tt3=pltSphere.plotSphere(X,Y*0.0,Z, clrMatrix=ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, 
                                 ccLim=(ccMinLump, ccMaxLump),colorMap=cMap)
-        tt4=pltSphere.plotSphere(X,Y,Z, clrMatrix=np.ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, ccLim=(ccMinLump, ccMaxLump),colorMap=cMap)
+        tt4=pltSphere.plotSphere(X,Y,Z, clrMatrix=ones(X.shape)*thetaLump[timeSel]*thetaIn+Tinf, ccLim=(ccMinLump, ccMaxLump),colorMap=cMap)
         for trace in tt4: trace.update(visible=False)
 
-    fig = go.Figure(data = tt + tt2 + tt3 + tt4)
+    fig = Figure(data = tt + tt2 + tt3 + tt4)
 
     fig = make_subplots(
         rows=2, cols=2,
@@ -376,23 +371,23 @@ while (newSim=='y'):
         fig.add_trace(trace, row=2, col=1)
 
     # Add temperature profile plot
-    rrTot=np.concatenate((np.flipud(-rr) ,rr))
-    thetaRadiusTot=np.concatenate((np.flipud(thetaRadius),thetaRadius))
+    rrTot=concatenate((flipud(-rr) ,rr))
+    thetaRadiusTot=concatenate((flipud(thetaRadius),thetaRadius))
 
     fig.add_trace(
-        go.Scatter(x=rrTot, y=thetaRadiusTot[:,timeSel]*thetaIn+Tinf, 
+        Scatter(x=rrTot, y=thetaRadiusTot[:,timeSel]*thetaIn+Tinf, 
                 mode='lines', name='T (r,timeSel)'),
         row=1, col=2
     )
 
     fig.add_trace(
-        go.Scatter(x=np.array([-ro,ro]), y=np.repeat(thetaLump[timeSel],2)*thetaIn+Tinf, 
+        Scatter(x=array([-ro,ro]), y=repeat(thetaLump[timeSel],2)*thetaIn+Tinf, 
                 mode='lines', name='Lumped Cap.'),
         row=1, col=2
     )
 
     fig.add_trace(
-        go.Scatter(x=np.array([-ro,ro]), y=np.repeat(Tinf,2), 
+        Scatter(x=array([-ro,ro]), y=repeat(Tinf,2), 
                 mode='lines', line=dict(color='black',dash='dash'),
                 name='Ambient Temperature'),
         row=1, col=2
@@ -402,27 +397,25 @@ while (newSim=='y'):
     nameLocation=['Surface','Center','Middle']
     for ii in range(3):  
         fig.add_trace(
-            go.Scatter(x=t, y=theta_profiles[:,ii]*thetaIn+Tinf, 
+            Scatter(x=t, y=theta_profiles[:,ii]*thetaIn+Tinf, 
                     mode='lines', name=nameLocation[ii]),
             row=2, col=2
         )
 
     fig.add_trace(
-            go.Scatter(x=t, y=thetaLump*thetaIn+Tinf, 
+            Scatter(x=t, y=thetaLump*thetaIn+Tinf, 
                     mode='lines', name='Lumped Cap.'),
             row=2, col=2
         )
 
     fig.add_trace(
-            go.Scatter(x=np.array([0, tmax]), y=np.repeat(Tinf,2), 
+            Scatter(x=array([0, tmax]), y=repeat(Tinf,2), 
                     mode='lines', line=dict(color='black',dash='dash'),
                     name='Ambient Temperature', showlegend=False),
             row=2, col=2
         )
 
     #slider_steps=pltSphere.createSliderSteps(t, thetaRTime, thetaRo,thetaRadius)
-
-
 
     # Create slider steps for all subplots
     slider_steps = []
@@ -434,22 +427,22 @@ while (newSim=='y'):
                 # Update surface colors for both spheres
                 "surfacecolor": [
                     thetaRTime[:,:,j]*thetaIn+Tinf,  # For the sphere plot
-                    np.ones(YB.shape)*thetaRo[j]*thetaIn+Tinf,
-                    np.ones(YA.shape)*thetaLump[j]*thetaIn+Tinf,  # For the sphere plot
-                    np.ones(YB.shape)*thetaLump[j]*thetaIn+Tinf  # Keep time evolution plot static  # Keep time evolution plot static
+                    ones(YB.shape)*thetaRo[j]*thetaIn+Tinf,
+                    ones(YA.shape)*thetaLump[j]*thetaIn+Tinf,  # For the sphere plot
+                    ones(YB.shape)*thetaLump[j]*thetaIn+Tinf  # Keep time evolution plot static  # Keep time evolution plot static
                 ],
                 # Update temperature profile scatter plot
-                "y": [YA, YB, YA, YB,thetaRadiusTot[:,j]*thetaIn+Tinf,np.repeat(thetaLump[j],2)*thetaIn+Tinf,np.repeat(Tinf,2),  # For the temperature profile plot
-                    thetaRo*thetaIn+Tinf,thetaR*thetaIn+Tinf ,thetaMid*thetaIn+Tinf, thetaLump*thetaIn+Tinf, np.repeat(Tinf,2)]   # Keep time evolution plot static
+                "y": [YA, YB, YA, YB,thetaRadiusTot[:,j]*thetaIn+Tinf,repeat(thetaLump[j],2)*thetaIn+Tinf,repeat(Tinf,2),  # For the temperature profile plot
+                    thetaRo*thetaIn+Tinf,thetaR*thetaIn+Tinf ,thetaMid*thetaIn+Tinf, thetaLump*thetaIn+Tinf, repeat(Tinf,2)]   # Keep time evolution plot static
             }, {
-                "title": f"Temperature Distribution - Time Step: {t[j]} - Energy {energyStr} : {energy[j]:.2f} E/E_Lumped: {energyRatio[j]:.3f}   Biot: {Bi:.2f} Fourier: {Fo[j]:.4f}",
+                "title": f"{intStr} - Time Step: {t[j]} - Energy {energyStr} : {energy[j]:.2f} E/E_Lumped: {energyRatio[j]:.3f}   Biot: {Bi:.2f} Fourier: {Fo[j]:.4f}",
             }]
         })
 
     # Update layout with slider
     fig.update_layout(
     title=dict(
-            text="Temperature Distribution in Sphere",
+            text=intStr,
             x=0.5,
             y=0.95,
             xanchor='center',
@@ -470,10 +463,10 @@ while (newSim=='y'):
         ),
         yaxis2=dict(
             title="Temperature [°C]",
-            range=[np.min((ccMin,Tinf)), np.max((ccMax,Tinf))],  # Or use [ccMin, ccMax] for data-specific range
+            range=[min((ccMin,Tinf)), max((ccMax,Tinf))],  # Or use [ccMin, ccMax] for data-specific range
         ),
         # Keep existing axes settings for time evolution subplot
-        yaxis1=dict(title="Temperature [°C]", range=[np.min((ccMin,Tinf)), np.max((ccMax,Tinf))]),
+        yaxis1=dict(title="Temperature [°C]", range=[min((ccMin,Tinf)), max((ccMax,Tinf))]),
         xaxis1=dict(title="Radius [m]", range = [-ro, ro]),
         margin=dict(l=0, r=0, t=100, b=0)  # Minimize margins
     )
