@@ -59,7 +59,7 @@ defScreen = """
 +-------------------------------------------------------------+
 """
 inputsDefault = {
-    1: ("Geometry", "slab"),
+    1: ("Geometry", "sphere"),
     2: ("Density [kg/m3]", 2458.),
     3: ("Particle diameter [m]", 0.02),
     4: ("Specific heat capacity [J/(kg K)]", 835.),
