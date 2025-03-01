@@ -415,6 +415,21 @@ while (newSim=='y'):
             row=2, col=2
         )
 
+
+
+
+# Add cursor line trace that moves with slider
+    cursor_line = {
+        "type": "line",
+        "xref": "x2",
+        "yref": "y2",
+        "line": {
+            "color": "red",
+            "width": 1,
+            "dash": "dot"
+        }
+    }
+
     #slider_steps=pltSphere.createSliderSteps(t, thetaRTime, thetaRo,thetaRadius)
 
     # Create slider steps for all subplots
@@ -436,11 +451,26 @@ while (newSim=='y'):
                     thetaRo*thetaIn+Tinf,thetaR*thetaIn+Tinf ,thetaMid*thetaIn+Tinf, thetaLump*thetaIn+Tinf, repeat(Tinf,2)]   # Keep time evolution plot static
             }, {
                 "title": f"{intStr} - Time Step: {t[j]} - Energy {energyStr} : {energy[j]:.2f} E/E_Lumped: {energyRatio[j]:.3f}   Biot: {Bi:.2f} Fourier: {Fo[j]:.4f}",
+                "shapes": [{
+                    **cursor_line,
+                    "x0": t[j],
+                    "x1": t[j],
+                    "y0": min((ccMin,Tinf)),
+                    "y1": max((ccMax,Tinf))
+                }]
             }]
         })
 
     # Update layout with slider
     fig.update_layout(
+    hovermode="x",
+    shapes=[{
+        **cursor_line,
+        "x0": t[timeSel],
+        "x1": t[timeSel],
+        "y0": min((ccMin,Tinf)),
+        "y1": max((ccMax,Tinf))
+    }],
     title=dict(
             text=intStr,
             x=0.5,
@@ -460,6 +490,10 @@ while (newSim=='y'):
         xaxis2=dict(
             title="Time [sec.]",
             range=[t[0], t[-1]],
+            spikemode="across",
+            spikesnap="cursor",
+            spikecolor="red",
+            spikedash="dot"
         ),
         yaxis2=dict(
             title="Temperature [°C]",
