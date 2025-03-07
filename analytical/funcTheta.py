@@ -47,19 +47,16 @@ def funcDn(r, root, b):
 # Theta Function
 #------------------------------------------------------------------------------
 
-def theta(r, b, rts, Bi, Fo):
+def theta(r, b, rts, Fo):
     """
     Dimensionless temperature for analytical solution of 1D transient heat
     conduction for a solid sphere, cylinder, or slab.
-    r = dimensionaless length term to evaluate theta, (-)
+    r = dimensionless length term to evaluate theta, (-)
     b = shape factor where 2 sphere or 1 cylinder or 0 slab, (-)
-    z = range of zeta values to evaluate zeta, Bi equation for positive roots
-    Bi = Biot number h*L/k, (-)
+    rts = positive roots from the zeta, Bi equation
     Fo = Fourier number alpha*t/L^2, (-)
     """
     
-    #rts = roots(z, b, Bi)   # positive roots of the zeta, Bi equation
-    #rts2=roots2(z,b,Bi)
     n = len(rts)            # number of positive roots
     
     # initial dimensionless temperature at first root
@@ -77,11 +74,12 @@ def thetaLumped(r, b, h,k,alpha,time):
     """
     Dimensionless temperature for analytical solution of 1D transient heat
     conduction for a solid sphere, cylinder, or slab.
-    r = dimensionaless length term to evaluate theta, (-)
+    r = length term to evaluate theta, (m)
     b = shape factor where 2 sphere or 1 cylinder or 0 slab, (-)
-    z = range of zeta values to evaluate zeta, Bi equation for positive roots
-    Bi = Biot number h*L/k, (-)
-    Fo = Fourier number alpha*t/L^2, (-)
+    h= heat transfer coefficient, (W/m^2K)
+    k= thermal conductivity, (W/mK)
+    alpha= thermal diffusivity, (m^2/s)
+    time= time, (s)
     """
     if b==2:
         Lc=r/3.0
@@ -95,21 +93,38 @@ def thetaLumped(r, b, h,k,alpha,time):
     return thetaLumped, Bi, Fo,Lc    # theta temperature profile evaluated at r
 
 
-def energyTransient(volThermalCapacity,thDiff,t,zn,R,Ti,Tinf):
-    V=4./3.*pi*R**3.
-    Fou=thDiff*t/R**2.
-    C=volThermalCapacity
-    A=4*(sin(zn)-zn*cos(zn))/(2.*zn-sin(2.*zn))*exp(-zn**2.*Fou)
-    B=zn/R
-    ee= V-sum(4.*pi*A*(-R/(B**2.)*cos(B*R)+1./(B**3.)*sin(B*R)))
-    energy=C*ee*(Tinf-Ti)
-    return energy
+#def energyTransient(volThermalCapacity,thDiff,t,zn,R,Ti,Tinf):
+#
+#
+#    V=4./3.*pi*R**3.
+#    Fou=thDiff*t/R**2.
+#    C=volThermalCapacity
+#    A=4*(sin(zn)-zn*cos(zn))/(2.*zn-sin(2.*zn))*exp(-zn**2.*Fou)
+#    B=zn/R
+#    ee= V-sum(4.*pi*A*(-R/(B**2.)*cos(B*R)+1./(B**3.)*sin(B*R)))
+#    energy=C*ee*(Tinf-Ti)
+#    return energy
 
 def energyTransientLumped(thermCap,TempIn,TempFin):  
+    """Calculate lumped transient energy.
+    thermCap = Thermal capacitance, (J or J/m or J/m^2)
+    TempIn = Temperature at time= 0s , (°)
+    Tempfin = Temperature at the final time, (°)
+    """
     energyLumped=thermCap*(TempFin-TempIn)
     return energyLumped
 
 def energyTransient2(hh,thDiff,t,zn,R,Ti,Tinf,geometry):
+    """Calculate energy during transient
+    hh = heat transfer coefficient, (W/m^2K)
+    thDiff = thermal diffusivity, (m^2/s)
+    t = Considered time, (s)
+    zn = Positive roots from the zeta, Bi equation
+    R = Characteristic length of the geometry, (m)
+    Ti = Temperature at time= 0s , (°)
+    Tinf = Temperature of the fluid, (°)
+    geometry = Type of geometry, (sphere, slab, cylinder)
+    """
     L=1.0
     B=(-zn**2./R**2.*thDiff)
     if geometry=='sphere':
