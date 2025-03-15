@@ -16,6 +16,7 @@ from plotly.graph_objects import Figure,Scatter
 from plotly.subplots import make_subplots
 from funcRoots import roots
 from tabulate import tabulate
+import chartBuild
 
 # Parameters from Papadikis 2010a Table 1
 #------------------------------------------------------------------------------
@@ -35,16 +36,17 @@ defScreen = """
 |                       DEFAULT VALUES                        |
 +-------------------------------------------------------------+
 | 1. Geometry  (sphere, cylinder, slab):         sphere       |
-| 1. Density [kg/m3]:                             2458        |
-| 2. Particle diameter/thickness [m]:             0.025       |
-| 3. Specific heat capacity [J/(kg K)]:            835        |
-| 4. Thermal conductivity            [W/(m K)]:   0.75        |
-| 5. Uniform initial temperature           [°C]:  500         |
-| 6. Surrounding fluid or gas temperature [°C]:   20          |
-| 7. Maximum time [s]:                            150         |
-| 8. Heat transfer coefficient [W/(m2 K)]:        300         |
-| 9. Number of discretization radius:             100         |
-| 10. Slider step time [s]:                       1           |
+| 2. Density [kg/m3]:                             2458        |
+| 3. Particle diameter/thickness [m]:             0.025       |
+| 4. Specific heat capacity [J/(kg K)]:           835         |
+| 5. Thermal conductivity            [W/(m K)]:   0.75        |
+| 6. Uniform initial temperature           [°C]:  500         |
+| 7. Surrounding fluid or gas temperature [°C]:   20          |
+| 8. Maximum time [s]:                            150         |
+| 9. Heat transfer coefficient [W/(m2 K)]:        300         |
+| 10. Number of discretization radius:            100         |
+| 11. Slider step time [s]:                       1           |
+| 12. Compute charts (y/n):                       y           |
 +-------------------------------------------------------------+
 """
 inputsDefault = {
@@ -58,7 +60,8 @@ inputsDefault = {
     8: ("Maximum time [s]", 150),
     9: ("Heat transfer coefficient [W/(m2 K)]", 300.),
     10: ("Number of discretization radius", 100),
-    11: ("Slider step time [s]", 1)
+    11: ("Slider step time [s]", 1),
+    12: ("Compute charts", "y")
     }
 
 print(defScreen)
@@ -158,6 +161,10 @@ while (newSim=='y'):
         b=2
         if geom!="sphere": print("Invalid geometry- Default to sphere")
 
+    energyMax=cpw*rhow*Vol*thetaIn
+
+    cc,ww=chartBuild.computeQChart(Vol,Ti,Tinf,ro,h, alpha,geom)
+
 
 # Initialize arrays
     thetaRadius=zeros((len(rr), len(t)))
@@ -210,9 +217,7 @@ while (newSim=='y'):
     thetaLump, BiLump, FoLump, Lc=thetaLumped(ro, b, h,kw,alpha,t)
 
     # Energy Calculation
-
-    energyMax=cpw*rhow*Vol*thetaIn
-  
+ 
     for ii in range(len(t)):
         energy[ii]=energyTransient2(h,alpha,t[ii],rootsVal,ro,Ti,Tinf,geometry=geom)
         energyLumped[ii]=energyTransientLumped(rhow*cpw*Vol,Ti,thetaLump[ii]*thetaIn+Tinf)
