@@ -163,8 +163,11 @@ while (newSim=='y'):
 
     energyMax=cpw*rhow*Vol*thetaIn
 
-    cc,ww=chartBuild.computeQChart(Vol,Ti,Tinf,ro,h, alpha,geom)
+    cc,ww=chartBuild.computeQChart(geom)
 
+    cc2,ww2=chartBuild.computeChartHeisler1(geom)
+
+    cc3, ww3= chartBuild.computeChartHeisler2 (geom)
 
 # Initialize arrays
     thetaRadius=zeros((len(rr), len(t)))
