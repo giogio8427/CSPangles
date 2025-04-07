@@ -5,7 +5,8 @@ import plotly.graph_objects as go
 from scipy.linalg import norm
 import matplotlib.pyplot as plt
 import sunposition as sp
-from ipywidgets import interact, IntSlider
+from ipywidgets import interact, IntSlider, FloatSlider, HBox, Layout, interactive_output
+from IPython.display import display
 
 
 
@@ -149,7 +150,7 @@ firstRun=True
 
 
 def initialCompute(lon, lat, year, month, day):
-    global azArray, zenArray, hourArray, endArr, startArr
+    global azArray, zenArray, hourArray, endArr, startArr,ii, iiSun
     # Initialize arrays for azimuth and zenith angles
     azArray=np.zeros(24)
     zenArray=np.zeros(24)
@@ -283,6 +284,7 @@ def comp(zenith, azimuth):
 
 indTest=16
 
+initialCompute(lon, lat, year, month, day)
 comp(np.deg2rad(zenArray[indTest]), np.deg2rad(azArray[indTest]))
 
 #region Plotly section
@@ -509,7 +511,7 @@ def drawFig():
     return fig
 #endregion
 
-initialCompute(lon, lat, year, month, day)
+
 
 while ((zenArray[ii]<=90) & (zenArray[ii]>0)):
     sunVector = np.array([np.sin(np.deg2rad(zenArray[ii])) * np.cos(np.deg2rad(azArray[ii])), 
@@ -536,9 +538,18 @@ if firstRun==True:
     firstRun=False
 
 
-@interact(day=IntSlider(min=1, max=31, step=1, value=day, description="Day [d]"),month=IntSlider(min=1, max=12, step=1, value=month, description="Month [m]"),year=IntSlider(min=2000, max=2100, step=1, value=year, description="Year [y]"), hour=IntSlider(min=0, max=23, step=1, value=12, description="Hour [-]"), lat=IntSlider(min=-90, max=90, step=0.1, value=lat, description="Latitude [°]"), lon=IntSlider(min=-180, max=180, step=0.1, value=lon, description="Longitude[°]"))
+daySlider=IntSlider(min=1, max=31, step=1, value=day, description="Day [d]", layout=Layout(width='100%'))
+monthSlider=IntSlider(min=1, max=12, step=1, value=month, description="Month [m]", layout=Layout(width='100%'))
+yearSlider=IntSlider(min=2000, max=2100, step=1, value=year, description="Year [y]", layout=Layout(width='100%'))
+hourSlider=IntSlider(min=0, max=23, step=1, value=12, description="Hour [h]", layout=Layout(width='100%'))
+latSlider=FloatSlider(min=-90, max=90, step=0.1, value=lat, description="Latitude [°]", layout=Layout(width='100%'))
+lonSlider=FloatSlider(min=-180, max=180, step=0.1, value=lon, description="Longitude[°]", layout=Layout(width='100%'))
+slider_box = HBox([daySlider, monthSlider, yearSlider, hourSlider, latSlider, lonSlider], layout=Layout(display='flex', flex_flow='row', align_items='center', width='100%'))
+# Display the slider box
+display(slider_box)
+
 # Update sun vector and related calculations
-def update_figure(day, month, hour,lat,lon):
+def update_figure(day, month, year, hour,lat,lon):
     hh=hour
     initialCompute(lon, lat, year, month, day)
     azimuth = np.deg2rad(azArray[hour])
@@ -625,7 +636,18 @@ def update_figure(day, month, hour,lat,lon):
     )        
     fig.show()
 
-  
+
+
+# Connect the function to the sliders without creating duplicate UI elements
+output = interactive_output(update_figure, {
+    'day': daySlider,
+    'month': monthSlider,
+    'year': yearSlider,
+    'hour': hourSlider,
+    'lat': latSlider,
+    'lon': lonSlider
+})
+display(output)
 
         
 
@@ -651,6 +673,7 @@ def update_figure(day, month, hour,lat,lon):
 #ax.plot_surface(xAp, yAp, zAp, alpha=0.5, color='gray')
 #plt.show()
 #a=1
+
 
 
 
