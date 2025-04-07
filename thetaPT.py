@@ -145,40 +145,42 @@ year = input(f'Enter the year [{year}]: ') or year
 
 timeStep=1 # [h]
 #endregion
-
-
-azArray=np.zeros(24)
-zenArray=np.zeros(24)
-hourArray=np.linspace(0,23,24)
-lon=float(lon)
-lat=float(lat) 
-year=str(year)
-month=str(month)
-day=str(day)
-if int(month)<10:
-    month='0'+str(month)
-if int(day)<10:  
-    day='0'+str(day)
-
-stringDay=year+'-'+month+'-'+day
-lon  = np.array([lon])
-lat = np.array([lat])
-
-sp.disable_jit()
-for ii in hourArray:
-    addStr=''
-    if ii<10:
-        addStr='0'
-    currTime=np.datetime64(stringDay + 'T' + addStr + str(int(ii)) + ':00:00')
-    azArray[int(ii)],zenArray[int(ii)] = sp.sunpos(currTime,lat,lon,0)[:2] #discard RA, dec, H
-
-
-iiSun=np.argmax((zenArray>0) & (zenArray<=90))
-ii=iiSun
-tt=np.zeros(24)
 firstRun=True
-endArr=np.zeros((3,24))
-startArr=np.zeros((3,24))
+
+
+def initialCompute(lon, lat, year, month, day):
+    global azArray, zenArray, hourArray, endArr, startArr
+    # Initialize arrays for azimuth and zenith angles
+    azArray=np.zeros(24)
+    zenArray=np.zeros(24)
+    hourArray=np.linspace(0,23,24)
+    lon=float(lon)
+    lat=float(lat) 
+    year=str(year)
+    month=str(month)
+    day=str(day)
+    if int(month)<10:
+        month='0'+str(month)
+    if int(day)<10:  
+        day='0'+str(day)
+
+    stringDay=year+'-'+month+'-'+day
+    lon  = np.array([lon])
+    lat = np.array([lat])
+
+    sp.disable_jit()
+    for ii in hourArray:
+        addStr=''
+        if ii<10:
+            addStr='0'
+        currTime=np.datetime64(stringDay + 'T' + addStr + str(int(ii)) + ':00:00')
+        azArray[int(ii)],zenArray[int(ii)] = sp.sunpos(currTime,lat,lon,0)[:2] #discard RA, dec, H
+
+    iiSun=np.argmax((zenArray>0) & (zenArray<=90))
+    ii=iiSun
+    tt=np.zeros(24)
+    endArr=np.zeros((3,24))
+    startArr=np.zeros((3,24))
 
 
 
@@ -507,6 +509,8 @@ def drawFig():
     return fig
 #endregion
 
+initialCompute(lon, lat, year, month, day)
+
 while ((zenArray[ii]<=90) & (zenArray[ii]>0)):
     sunVector = np.array([np.sin(np.deg2rad(zenArray[ii])) * np.cos(np.deg2rad(azArray[ii])), 
                           np.sin(np.deg2rad(zenArray[ii])) * np.sin(np.deg2rad(azArray[ii])), 
@@ -531,12 +535,15 @@ if firstRun==True:
     print('thetaPerp: ', format(np.rad2deg(thetaPerp), '.2f'), '°')
     firstRun=False
 
-@interact(hour=IntSlider(min=0, max=23, step=1, value=12, description="Hour"))
+
+@interact(day=IntSlider(min=1, max=31, step=1, value=day, description="Day [d]"),month=IntSlider(min=1, max=12, step=1, value=month, description="Month [m]"),year=IntSlider(min=2000, max=2100, step=1, value=year, description="Year [y]"), hour=IntSlider(min=0, max=23, step=1, value=12, description="Hour [-]"), lat=IntSlider(min=-90, max=90, step=0.1, value=lat, description="Latitude [°]"), lon=IntSlider(min=-180, max=180, step=0.1, value=lon, description="Longitude[°]"))
 # Update sun vector and related calculations
-def update_figure(hour):
+def update_figure(day, month, hour,lat,lon):
     hh=hour
+    initialCompute(lon, lat, year, month, day)
     azimuth = np.deg2rad(azArray[hour])
     zenith = np.deg2rad(zenArray[hour])
+    
     comp(zenith, azimuth)
  
     with fig.batch_update():
