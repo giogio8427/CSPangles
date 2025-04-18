@@ -13,6 +13,24 @@ from IPython.display import display
 
 #region defining functions
 
+# Function to calculate days in month considering leap years
+def days_in_month(month, year):
+    """Return the number of days in a month for a given year."""
+    month = int(month)
+    year = int(year)
+    if month in [1, 3, 5, 7, 8, 10, 12]:
+        return 31
+    elif month in [4, 6, 9, 11]:
+        return 30
+    elif month == 2:
+        # Check for leap year
+        if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0):
+            return 29
+        else:
+            return 28
+    else:
+        return 31  # Default fallback
+
 def sunVect(azimuth, zenith):
     return np.array([np.sin(zenith) * np.cos(azimuth), np.sin(zenith) * np.sin(azimuth), np.cos(zenith)])
 
@@ -106,7 +124,6 @@ def arcCircle2D(radius, center, point1, point2, nDiscr=25):
 
     angle=-np.arctan2(v1[0]*v2[1]-v1[1]*v2[0],v1[0]*v2[0]+v1[1]*v2[1])
 
-
     x = np.zeros(nDiscr)
     y = np.zeros(nDiscr)
     # Generate points along the arc
@@ -158,9 +175,8 @@ timeStep=1 # [h]
 #endregion
 firstRun=True
 
-
 def initialCompute(lon, lat, year, month, day):
-    global azArray, zenArray, hourArray, endArr, startArr,ii, iiSun
+    global azArray, zenArray, hourArray, endArr, startArr,ii, iiSun, iiFin
     # Initialize arrays for azimuth and zenith angles
     azArray=np.zeros(24)
     zenArray=np.zeros(24)
@@ -189,29 +205,27 @@ def initialCompute(lon, lat, year, month, day):
 
     iiSun=np.argmax((zenArray>0) & (zenArray<=90))
     ii=iiSun
-    tt=np.zeros(24)
+    
     endArr=np.zeros((3,24))
     startArr=np.zeros((3,24))
 
+    while ((zenArray[ii]<=90) & (zenArray[ii]>0)):
+        sunVector = np.array([np.sin(np.deg2rad(zenArray[ii])) * np.cos(np.deg2rad(azArray[ii])), 
+                            np.sin(np.deg2rad(zenArray[ii])) * np.sin(np.deg2rad(azArray[ii])), 
+                            np.cos(np.deg2rad(zenArray[ii]))])
+        comp(np.deg2rad(zenArray[ii]), np.deg2rad(azArray[ii]))
+        startArr[:,ii]=start[:,0]
+        endArr[:,ii] = startArr[:,ii] + sunVector * length
+        ii=ii+1
 
+    iiFin=ii-1
 
-#now = sp.time_to_datetime64('now')
-
-
-#az[0]=130.
-#zen[0]=70.
-# Sun-path diagram
-#xSunPath=np.zeros(24)
-#ySunPath=np.zeros(24)
-#zSunPath=np.zeros(24)
 def comp(zenith, azimuth, axRot_az=0):
-    global projSunHor, zen, az,ii, startArr, sunVector, endArr, iiSun, iiFin, end2, normalVect, start, end, x, y, z, xAp, yAp, zAp, xLon, yLon, zLon, xHor, yHor, zHor, xArc, yArc, zArc, xArcZen, yArcZen, zArcZen, xArcAz, yArcAz, zArcAz, xSun, ySun, zSun, incAngle, azArray, zenArray, length,thetaPerp
+    global projSunHor, zen, az,ii, startArr, sunVector, endArr, iiSun, end2, normalVect, start, end, x, y, z, xAp, yAp, zAp, xLon, yLon, zLon, xHor, yHor, zHor, xArc, yArc, zArc, xArcZen, yArcZen, zArcZen, xArcAz, yArcAz, zArcAz, xSun, ySun, zSun, incAngle, azArray, zenArray, length,thetaPerp
 
     zen=np.rad2deg(zenith)  
     az=np.rad2deg(azimuth)
-
     length=10.
-    rotMatrAxRot=rotationMatrixAroundZ(np.deg2rad(axRot_az))
     azApparent=azimuth+np.deg2rad(axRot_az)
     x,y,z=parabolicCylinderSurface()    
     maxZ=np.max(z)
@@ -225,10 +239,8 @@ def comp(zenith, azimuth, axRot_az=0):
     rotMatr=rotationMatrixAroundY(rotAngle)
     xLon,yLon,zLon=rotatePoints(xLon,yLon,zLon,rotMatr)
 
-    #while ((zenArray[ii]<=90) & (zenArray[ii]>0)):
     start=np.array([centX,centY,maxZ]).reshape((3,1))  # Start point of the sun vector    
-     #   zenith = np.deg2rad(zenArray[ii])
-     #   azimuth = np.deg2rad(azArray[ii])
+
     sunVector = np.array([np.sin(zenith) * np.cos(azimuth), np.sin(zenith) * np.sin(azimuth), np.cos(zenith)])
     sunVectorApparent = np.array([np.sin(zenith) * np.cos(azApparent), np.sin(zenith) * np.sin(azApparent), np.cos(zenith)])
     projPerp=np.array([0,sunVectorApparent[1],sunVectorApparent[2]])
@@ -241,19 +253,6 @@ def comp(zenith, azimuth, axRot_az=0):
     rotAxis=rotationMatrixAroundZ(np.deg2rad(axRot_az)) @ np.array([1,0,0])
     rotatedTrack=rotationMatrixAroundAxis(rotAxis,-thetaPerp)
   
-    #start=rotatedTrack @ start
-#        startArr[:,ii]=start[:,0]
-#        endArr[:,ii] = startArr[:,ii] + sunVector * length
-    #ii=ii+1
-    
-    #iiFin=ii-1     
-
-    #x,y,z=rotatePoints(x,y,z,rotZ)
-    #xAp,yAp,zAp=rotatePoints(xAp,yAp,zAp,rotZ)
-    #xLon,yLon,zLon=rotatePoints(xLon,yLon,zLon,rotZ)
-
-    #start=np.array([centX,centY,maxZ]).reshape((3,1))  # Start point of the sun vector    
-    #rotatedTrack=rotationMatrixAroundY(-thetaPerp)
     rr=np.matmul(rotatedTrack,rotZ)
     x,y,z=rotatePoints(x,y,z,rr)
     xAp,yAp,zAp=rotatePoints(xAp,yAp,zAp,rr)
@@ -283,12 +282,9 @@ def comp(zenith, azimuth, axRot_az=0):
     projSunHor=(np.array([sunVector[0],sunVector[1],0])).reshape(3,1)
 
     xArcZen,yArcZen, zArcZen=arcCircle3D(length/2.0,start,start+np.array([0,0,0.5*length]).reshape(3,1),end, nDiscr=25)
-    #xArcAz,yArcAz, zArcAz=arcCircle3D(length/2.0,start,start+projSunHor*0.5*length,start+np.array([0,-0.5*length,0]).reshape(3,1), type='az', nDiscr=25)
-    #xArcAz,yArcAz = arcCircle2D(length/2.0,start,start+np.array([0,-0.5*length,0]).reshape(3,1),start+projSunHor*0.5*length, nDiscr=50)
     xArcAz,yArcAz = arcCircle2DAngle(length/2.0,start,azimuth,nDiscr=50)
-
     zArcAz=np.zeros(len(xArcAz))+start[2]
-    #xArcAz,yArcAz, zArcAz=arcCircle3D(length/2.0,start,start+projSunHor*0.5*length, start+np.array([0,-0.5*length,0]).reshape(3,1), nDiscr=25)
+
     projSunHor=projSunHor/norm(projSunHor)
     projSunHor=projSunHor*length/2.0
     return
@@ -296,9 +292,11 @@ def comp(zenith, azimuth, axRot_az=0):
 #endregion
 
 indTest=16
-
 initialCompute(lon, lat, year, month, day)
-comp(np.deg2rad(zenArray[indTest]), np.deg2rad(azArray[indTest]))
+azimuth = np.deg2rad(azArray[indTest])
+zenith = np.deg2rad(zenArray[indTest])
+
+comp(np.deg2rad(zenArray[indTest]), np.deg2rad(azArray[indTest]),axRot_az)
 
 #region Plotly section
 # ============================================================================
@@ -312,14 +310,14 @@ def drawFig():
     fig.add_trace(go.Surface(x=x, y=y, z=z, colorscale=[[0, 'grey'], [1, 'grey']], opacity=0.9, showscale=False, name='Parabolic Cylinder'))
     color = 'orange'
     color2='blue'
-    #fig = go.Figure(data=[go.Surface(x=x, y=y, z=z)])
     fig.add_trace(go.Cone(
         x=[start[0,0]], y=[start[1,0]], z=[start[2,0]],
         u=[-sunVector[0]], v=[-sunVector[1]], w=[-sunVector[2]],
         sizemode="absolute",
         sizeref=1.,
         colorscale=[[0, color], [1, color]],
-        showscale=False
+        showscale=False,
+        visible=False
     ))
     fig.add_trace(go.Scatter3d(
         x=[start[0,0], end[0,0]],
@@ -335,7 +333,7 @@ def drawFig():
         sizemode="absolute",
         sizeref=1.,
         colorscale=[[0, color2], [1, color2]],
-        showscale=False
+        showscale=False,
     ))
     fig.add_trace(go.Scatter3d(
         x=[start[0,0], end2[0,0]],
@@ -524,21 +522,6 @@ def drawFig():
     return fig
 #endregion
 
-
-
-while ((zenArray[ii]<=90) & (zenArray[ii]>0)):
-    sunVector = np.array([np.sin(np.deg2rad(zenArray[ii])) * np.cos(np.deg2rad(azArray[ii])), 
-                          np.sin(np.deg2rad(zenArray[ii])) * np.sin(np.deg2rad(azArray[ii])), 
-                          np.cos(np.deg2rad(zenArray[ii]))])
-    comp(np.deg2rad(zenArray[ii]), np.deg2rad(azArray[ii]))
-    startArr[:,ii]=start[:,0]
-    endArr[:,ii] = startArr[:,ii] + sunVector * length
-    ii=ii+1
-
-iiFin=ii-1
-azimuth = np.deg2rad(azArray[indTest])
-zenith = np.deg2rad(zenArray[indTest])
-
 if firstRun==True:
     fig=drawFig()
     #fig.update_layout(autosize=True) # remove height=800
@@ -550,14 +533,24 @@ if firstRun==True:
     print('thetaPerp: ', format(np.rad2deg(thetaPerp), '.2f'), '°')
     firstRun=False
 
-
-daySlider=IntSlider(min=1, max=31, step=1, value=day, description="Day [d]", layout=Layout(width='100%'))
 monthSlider=IntSlider(min=1, max=12, step=1, value=month, description="Month [m]", layout=Layout(width='100%'))
 yearSlider=IntSlider(min=2000, max=2100, step=1, value=year, description="Year [y]", layout=Layout(width='100%'))
+daySlider=IntSlider(min=1, max=days_in_month(int(month), int(year)), step=1, value=int(day), description="Day [d]", layout=Layout(width='100%'))
+
+# Update day slider max value when month or year changes
+def update_day_slider(*args):
+    max_days = days_in_month(monthSlider.value, yearSlider.value)
+    daySlider.max = max_days
+    if daySlider.value > max_days:
+        daySlider.value = max_days
+
+# Register observers
+monthSlider.observe(update_day_slider, names='value')
+yearSlider.observe(update_day_slider, names='value')
 hourSlider=IntSlider(min=0, max=23, step=1, value=12, description="Hour [h]", layout=Layout(width='100%'))
 latSlider=FloatSlider(min=-90, max=90, step=0.1, value=lat, description="Latitude [°]", layout=Layout(width='100%'))
 lonSlider=FloatSlider(min=-180, max=180, step=0.1, value=lon, description="Longitude[°]", layout=Layout(width='100%'))
-axRotAzSlider=FloatSlider(min=-180, max=180, step=1, value=axRot_az, description="AxOrient [°]", layout=Layout(width='100%'))
+axRotAzSlider=FloatSlider(min=0, max=180, step=1, value=axRot_az, description="AxOrient [°]", layout=Layout(width='100%'))
 slider_box = HBox([daySlider, monthSlider, yearSlider, hourSlider, latSlider, lonSlider,axRotAzSlider], layout=Layout(display='flex', flex_flow='row', align_items='center', width='100%'))
 # Display the slider box
 display(slider_box)
@@ -572,11 +565,6 @@ def update_figure(day, month, year, hour,lat,lon, axRot_az):
     comp(zenith, azimuth, axRot_az)
  
     with fig.batch_update():
-        #fig.update_layout(scene=dict(
-        #    xaxis=dict(range=[-length, length]),
-        #    yaxis=dict(range=[-length, length]),
-        #    zaxis=dict(range=[-length, length]),
-        #))
 
         fig.update_layout(scene_aspectmode='manual',
                   scene_aspectratio=dict(x=1, y=1, z=1))
@@ -650,8 +638,6 @@ def update_figure(day, month, year, hour,lat,lon, axRot_az):
     )        
     fig.show()
 
-
-
 # Connect the function to the sliders without creating duplicate UI elements
 output = interactive_output(update_figure, {
     'day': daySlider,
@@ -663,12 +649,6 @@ output = interactive_output(update_figure, {
     'axRot_az': axRotAzSlider
 })
 display(output)
-
-        
-
-
-
-
 
 
 
