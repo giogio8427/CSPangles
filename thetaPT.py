@@ -5,7 +5,8 @@ import plotly.graph_objects as go
 from scipy.linalg import norm
 import matplotlib.pyplot as plt
 import sunposition as sp
-from ipywidgets import interact, IntSlider
+from ipywidgets import interact, IntSlider, FloatSlider, HBox, Layout, interactive_output
+from IPython.display import display
 
 
 
@@ -53,6 +54,15 @@ def rotationMatrixAroundZ(angleRad):
 
 def rotationMatrixAroundX(angleRad):
     return np.array([[1, 0, 0], [0, np.cos(angleRad), -np.sin(angleRad)], [0, np.sin(angleRad), np.cos(angleRad)]])
+
+def rotationMatrixAroundAxis(axis, angleRad):
+    axis = axis / norm(axis)  # Normalize the axis vector
+    cos_angle = np.cos(angleRad)
+    sin_angle = np.sin(angleRad)
+    ux, uy, uz = axis
+    return np.array([[cos_angle + ux**2 * (1 - cos_angle), ux * uy * (1 - cos_angle) - uz * sin_angle, ux * uz * (1 - cos_angle) + uy * sin_angle],
+                   [uy * ux * (1 - cos_angle) + uz * sin_angle, cos_angle + uy**2 * (1 - cos_angle), uy * uz * (1 - cos_angle) - ux * sin_angle],
+                   [uz * ux * (1 - cos_angle) - uy * sin_angle, uz * uy * (1 - cos_angle) + ux * sin_angle, uz * uz * (1 - cos_angle) + cos_angle]])
 
 def rotatePoints(x,y,z,rotationMatrix):
     for i in range(x.shape[0]):
@@ -134,6 +144,7 @@ lat = 41.9028  # Rome, Italy latitude
 day = 21
 month = 6
 year = 2023
+axRot_az=0.0
 
 # Use input with default values
 lon = input(f'Enter the longitude [{lon}]: ') or lon
@@ -141,44 +152,46 @@ lat = input(f'Enter the latitude [{lat}]: ') or lat
 day = input(f'Enter the day [{day}]: ') or day
 month = input(f'Enter the month [{month}]: ') or month
 year = input(f'Enter the year [{year}]: ') or year
-
+axRot_az = input(f'Enter the azimuth rotation angle [{0}]°: ') or axRot_az
 
 timeStep=1 # [h]
 #endregion
-
-
-azArray=np.zeros(24)
-zenArray=np.zeros(24)
-hourArray=np.linspace(0,23,24)
-lon=float(lon)
-lat=float(lat) 
-year=str(year)
-month=str(month)
-day=str(day)
-if int(month)<10:
-    month='0'+str(month)
-if int(day)<10:  
-    day='0'+str(day)
-
-stringDay=year+'-'+month+'-'+day
-lon  = np.array([lon])
-lat = np.array([lat])
-
-sp.disable_jit()
-for ii in hourArray:
-    addStr=''
-    if ii<10:
-        addStr='0'
-    currTime=np.datetime64(stringDay + 'T' + addStr + str(int(ii)) + ':00:00')
-    azArray[int(ii)],zenArray[int(ii)] = sp.sunpos(currTime,lat,lon,0)[:2] #discard RA, dec, H
-
-
-iiSun=np.argmax((zenArray>0) & (zenArray<=90))
-ii=iiSun
-tt=np.zeros(24)
 firstRun=True
-endArr=np.zeros((3,24))
-startArr=np.zeros((3,24))
+
+
+def initialCompute(lon, lat, year, month, day):
+    global azArray, zenArray, hourArray, endArr, startArr,ii, iiSun
+    # Initialize arrays for azimuth and zenith angles
+    azArray=np.zeros(24)
+    zenArray=np.zeros(24)
+    hourArray=np.linspace(0,23,24)
+    lon=float(lon)
+    lat=float(lat) 
+    year=str(year)
+    month=str(month)
+    day=str(day)
+    if int(month)<10:
+        month='0'+str(month)
+    if int(day)<10:  
+        day='0'+str(day)
+
+    stringDay=year+'-'+month+'-'+day
+    lon  = np.array([lon])
+    lat = np.array([lat])
+
+    sp.disable_jit()
+    for ii in hourArray:
+        addStr=''
+        if ii<10:
+            addStr='0'
+        currTime=np.datetime64(stringDay + 'T' + addStr + str(int(ii)) + ':00:00')
+        azArray[int(ii)],zenArray[int(ii)] = sp.sunpos(currTime,lat,lon,0)[:2] #discard RA, dec, H
+
+    iiSun=np.argmax((zenArray>0) & (zenArray<=90))
+    ii=iiSun
+    tt=np.zeros(24)
+    endArr=np.zeros((3,24))
+    startArr=np.zeros((3,24))
 
 
 
@@ -191,14 +204,15 @@ startArr=np.zeros((3,24))
 #xSunPath=np.zeros(24)
 #ySunPath=np.zeros(24)
 #zSunPath=np.zeros(24)
-def comp(zenith, azimuth):
+def comp(zenith, azimuth, axRot_az=0):
     global projSunHor, zen, az,ii, startArr, sunVector, endArr, iiSun, iiFin, end2, normalVect, start, end, x, y, z, xAp, yAp, zAp, xLon, yLon, zLon, xHor, yHor, zHor, xArc, yArc, zArc, xArcZen, yArcZen, zArcZen, xArcAz, yArcAz, zArcAz, xSun, ySun, zSun, incAngle, azArray, zenArray, length,thetaPerp
 
     zen=np.rad2deg(zenith)  
     az=np.rad2deg(azimuth)
 
     length=10.
-
+    rotMatrAxRot=rotationMatrixAroundZ(np.deg2rad(axRot_az))
+    azApparent=azimuth+np.deg2rad(axRot_az)
     x,y,z=parabolicCylinderSurface()    
     maxZ=np.max(z)
     centX=(np.max(x)+np.min(x))/2.0
@@ -216,16 +230,17 @@ def comp(zenith, azimuth):
      #   zenith = np.deg2rad(zenArray[ii])
      #   azimuth = np.deg2rad(azArray[ii])
     sunVector = np.array([np.sin(zenith) * np.cos(azimuth), np.sin(zenith) * np.sin(azimuth), np.cos(zenith)])
-    projPerp=np.array([0,sunVector[1],sunVector[2]])
+    sunVectorApparent = np.array([np.sin(zenith) * np.cos(azApparent), np.sin(zenith) * np.sin(azApparent), np.cos(zenith)])
+    projPerp=np.array([0,sunVectorApparent[1],sunVectorApparent[2]])
     projPerp=projPerp/norm(projPerp)
-    if sunVector[1]>=0.0:
+    if sunVectorApparent[1]>=0.0:
         thetaPerp=  np.arccos(np.dot(projPerp, np.array([0, 0, 1])))
     else:
         thetaPerp= -np.arccos(np.dot(projPerp, np.array([0, 0, 1])))
-
-    
-    rotatedTrack=rotationMatrixAroundX(-thetaPerp)
-    rotZ=rotationMatrixAroundZ(np.deg2rad(90.0))
+    rotZ=rotationMatrixAroundZ(np.deg2rad(90.0+axRot_az))
+    rotAxis=rotationMatrixAroundZ(np.deg2rad(axRot_az)) @ np.array([1,0,0])
+    rotatedTrack=rotationMatrixAroundAxis(rotAxis,-thetaPerp)
+  
     #start=rotatedTrack @ start
 #        startArr[:,ii]=start[:,0]
 #        endArr[:,ii] = startArr[:,ii] + sunVector * length
@@ -233,20 +248,21 @@ def comp(zenith, azimuth):
     
     #iiFin=ii-1     
 
-    x,y,z=rotatePoints(x,y,z,rotZ)
-    xAp,yAp,zAp=rotatePoints(xAp,yAp,zAp,rotZ)
-    xLon,yLon,zLon=rotatePoints(xLon,yLon,zLon,rotZ)
+    #x,y,z=rotatePoints(x,y,z,rotZ)
+    #xAp,yAp,zAp=rotatePoints(xAp,yAp,zAp,rotZ)
+    #xLon,yLon,zLon=rotatePoints(xLon,yLon,zLon,rotZ)
 
     #start=np.array([centX,centY,maxZ]).reshape((3,1))  # Start point of the sun vector    
     #rotatedTrack=rotationMatrixAroundY(-thetaPerp)
-    x,y,z=rotatePoints(x,y,z,rotatedTrack)
-    xAp,yAp,zAp=rotatePoints(xAp,yAp,zAp,rotatedTrack)
-    xLon,yLon,zLon=rotatePoints(xLon,yLon,zLon,rotatedTrack)
+    rr=np.matmul(rotatedTrack,rotZ)
+    x,y,z=rotatePoints(x,y,z,rr)
+    xAp,yAp,zAp=rotatePoints(xAp,yAp,zAp,rr)
+    xLon,yLon,zLon=rotatePoints(xLon,yLon,zLon,rr)
     
-    start=rotatedTrack @ start
+    start=rr @ start
     end = start + sunVector.reshape((3,1)) * length
 
-    normalVect=rotatedTrack @ np.array([0,0,1])
+    normalVect=rr @ np.array([0,0,1])
     end2=start+normalVect.reshape((3,1))*length
 
     xArc,yArc, zArc=arcCircle3D(length,start,end,end2, nDiscr=25)
@@ -281,6 +297,7 @@ def comp(zenith, azimuth):
 
 indTest=16
 
+initialCompute(lon, lat, year, month, day)
 comp(np.deg2rad(zenArray[indTest]), np.deg2rad(azArray[indTest]))
 
 #region Plotly section
@@ -507,6 +524,8 @@ def drawFig():
     return fig
 #endregion
 
+
+
 while ((zenArray[ii]<=90) & (zenArray[ii]>0)):
     sunVector = np.array([np.sin(np.deg2rad(zenArray[ii])) * np.cos(np.deg2rad(azArray[ii])), 
                           np.sin(np.deg2rad(zenArray[ii])) * np.sin(np.deg2rad(azArray[ii])), 
@@ -531,13 +550,26 @@ if firstRun==True:
     print('thetaPerp: ', format(np.rad2deg(thetaPerp), '.2f'), '°')
     firstRun=False
 
-@interact(hour=IntSlider(min=0, max=23, step=1, value=12, description="Hour"))
+
+daySlider=IntSlider(min=1, max=31, step=1, value=day, description="Day [d]", layout=Layout(width='100%'))
+monthSlider=IntSlider(min=1, max=12, step=1, value=month, description="Month [m]", layout=Layout(width='100%'))
+yearSlider=IntSlider(min=2000, max=2100, step=1, value=year, description="Year [y]", layout=Layout(width='100%'))
+hourSlider=IntSlider(min=0, max=23, step=1, value=12, description="Hour [h]", layout=Layout(width='100%'))
+latSlider=FloatSlider(min=-90, max=90, step=0.1, value=lat, description="Latitude [°]", layout=Layout(width='100%'))
+lonSlider=FloatSlider(min=-180, max=180, step=0.1, value=lon, description="Longitude[°]", layout=Layout(width='100%'))
+axRotAzSlider=FloatSlider(min=-180, max=180, step=1, value=axRot_az, description="AxOrient [°]", layout=Layout(width='100%'))
+slider_box = HBox([daySlider, monthSlider, yearSlider, hourSlider, latSlider, lonSlider,axRotAzSlider], layout=Layout(display='flex', flex_flow='row', align_items='center', width='100%'))
+# Display the slider box
+display(slider_box)
+
 # Update sun vector and related calculations
-def update_figure(hour):
+def update_figure(day, month, year, hour,lat,lon, axRot_az):
     hh=hour
+    initialCompute(lon, lat, year, month, day)
     azimuth = np.deg2rad(azArray[hour])
     zenith = np.deg2rad(zenArray[hour])
-    comp(zenith, azimuth)
+    
+    comp(zenith, azimuth, axRot_az)
  
     with fig.batch_update():
         #fig.update_layout(scene=dict(
@@ -618,7 +650,19 @@ def update_figure(hour):
     )        
     fig.show()
 
-  
+
+
+# Connect the function to the sliders without creating duplicate UI elements
+output = interactive_output(update_figure, {
+    'day': daySlider,
+    'month': monthSlider,
+    'year': yearSlider,
+    'hour': hourSlider,
+    'lat': latSlider,
+    'lon': lonSlider,
+    'axRot_az': axRotAzSlider
+})
+display(output)
 
         
 
@@ -644,6 +688,7 @@ def update_figure(hour):
 #ax.plot_surface(xAp, yAp, zAp, alpha=0.5, color='gray')
 #plt.show()
 #a=1
+
 
 
 
