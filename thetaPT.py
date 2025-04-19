@@ -9,8 +9,6 @@ from ipywidgets import interact, IntSlider, FloatSlider, HBox, Layout, interacti
 from IPython.display import display
 
 
-
-
 #region defining functions
 
 # Function to calculate days in month considering leap years
@@ -29,7 +27,7 @@ def days_in_month(month, year):
         else:
             return 28
     else:
-        return 31  # Default fallback
+        return 31
 
 def sunVect(azimuth, zenith):
     return np.array([np.sin(zenith) * np.cos(azimuth), np.sin(zenith) * np.sin(azimuth), np.cos(zenith)])
@@ -536,7 +534,16 @@ if firstRun==True:
 monthSlider=IntSlider(min=1, max=12, step=1, value=month, description="Month [m]", layout=Layout(width='100%'))
 yearSlider=IntSlider(min=2000, max=2100, step=1, value=year, description="Year [y]", layout=Layout(width='100%'))
 daySlider=IntSlider(min=1, max=days_in_month(int(month), int(year)), step=1, value=int(day), description="Day [d]", layout=Layout(width='100%'))
+timeSlider = IntSlider(min=0, max=24*60-1, step=1, value=12*60, description="Time [12:00]", layout=Layout(width='100%'))
 
+# Helper function to format time for display
+def update_time_description(change):
+    hours = timeSlider.value // 60
+    minutes = timeSlider.value % 60
+    timeSlider.description = f"Time [{hours:02d}:{minutes:02d}]"
+
+timeSlider.observe(update_time_description, names='value')
+update_time_description(None)  # Initialize the description
 # Update day slider max value when month or year changes
 def update_day_slider(*args):
     max_days = days_in_month(monthSlider.value, yearSlider.value)
@@ -547,22 +554,53 @@ def update_day_slider(*args):
 # Register observers
 monthSlider.observe(update_day_slider, names='value')
 yearSlider.observe(update_day_slider, names='value')
-hourSlider=IntSlider(min=0, max=23, step=1, value=12, description="Hour [h]", layout=Layout(width='100%'))
 latSlider=FloatSlider(min=-90, max=90, step=0.1, value=lat, description="Latitude [°]", layout=Layout(width='100%'))
 lonSlider=FloatSlider(min=-180, max=180, step=0.1, value=lon, description="Longitude[°]", layout=Layout(width='100%'))
 axRotAzSlider=FloatSlider(min=0, max=180, step=1, value=axRot_az, description="AxOrient [°]", layout=Layout(width='100%'))
-slider_box = HBox([daySlider, monthSlider, yearSlider, hourSlider, latSlider, lonSlider,axRotAzSlider], layout=Layout(display='flex', flex_flow='row', align_items='center', width='100%'))
+
+slider_box = HBox([yearSlider, monthSlider,daySlider, timeSlider, latSlider, lonSlider,axRotAzSlider], layout=Layout(display='flex', flex_flow='row', align_items='center', width='100%'))
 # Display the slider box
 display(slider_box)
 
 # Update sun vector and related calculations
-def update_figure(day, month, year, hour,lat,lon, axRot_az):
-    hh=hour
-    initialCompute(lon, lat, year, month, day)
-    azimuth = np.deg2rad(azArray[hour])
-    zenith = np.deg2rad(zenArray[hour])
+def update_figure(day, month, year,timeCurr, lat,lon, axRot_az ):
+    azimuth=np.zeros(1)
+    zenith=np.zeros(1)
+    # Convert year, month, day to strings with proper formatting
+    year_str = str(year)
+    month_str = f"{month:02d}"  # Ensure two digits with leading zero if needed
+    day_str = f"{day:02d}"      # Ensure two digits with leading zero if needed
     
-    comp(zenith, azimuth, axRot_az)
+    # Calculate hours and minutes from timeCurr (which is in minutes)
+    hours = timeCurr // 60
+    minutes = timeCurr % 60
+    
+    # Format the time part with leading zeros
+    time_str = f"{hours:02d}:{minutes:02d}:00"
+    
+    # Create the complete datetime64 string
+    stringDay = f"{year_str}-{month_str}-{day_str}"
+    
+    # For using in sunpos function
+    lat_array = np.array([lat])
+    lon_array = np.array([lon])
+    
+    # Create the datetime64 object
+    currTime = np.datetime64(f"{stringDay}T{time_str}")
+    
+    # Get the sun position for the specific time
+    azimuth[0], zenith[0] = sp.sunpos(currTime, lat_array, lon_array, 0)[:2]
+    
+    # Prepare for the hourly calculations
+           
+    #azArray[int(ii)],zenArray[int(ii)] = sp.sunpos(currTime,lat,lon,0)[:2] #discard RA, dec, H
+
+    initialCompute(lon, lat, year, month, day)
+    #azimuth = np.deg2rad(azArray[hour])
+    #zenith = np.deg2rad(zenArray[hour])
+    zenithIn=np.deg2rad(zenith[0])
+    azimuthIn=np.deg2rad(azimuth[0])
+    comp(zenithIn, azimuthIn, axRot_az)
  
     with fig.batch_update():
 
@@ -643,7 +681,7 @@ output = interactive_output(update_figure, {
     'day': daySlider,
     'month': monthSlider,
     'year': yearSlider,
-    'hour': hourSlider,
+    'timeCurr': timeSlider,
     'lat': latSlider,
     'lon': lonSlider,
     'axRot_az': axRotAzSlider
