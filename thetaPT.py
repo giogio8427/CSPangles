@@ -595,12 +595,43 @@ def update_figure(day, month, year,timeCurr, lat,lon, axRot_az ):
            
     #azArray[int(ii)],zenArray[int(ii)] = sp.sunpos(currTime,lat,lon,0)[:2] #discard RA, dec, H
 
-    initialCompute(lon, lat, year, month, day)
-    #azimuth = np.deg2rad(azArray[hour])
-    #zenith = np.deg2rad(zenArray[hour])
     zenithIn=np.deg2rad(zenith[0])
     azimuthIn=np.deg2rad(azimuth[0])
+    initialCompute(lon, lat, year, month, day)
+    
+    # Only run the 24-hour loop if date or location parameters have changed
+    # This prevents unnecessary calculations when only time is changed
+    global prev_day, prev_month, prev_year, prev_lat, prev_lon, prev_axRot_az
+    
+    # Initialize the tracking variables if they don't exist
+    if 'prev_day' not in globals():
+        prev_day, prev_month, prev_year = -1, -1, -1
+        prev_lat, prev_lon, prev_axRot_az = -999, -999, -999
+    
+    # Check if date or location parameters have changed
+    date_loc_changed = (
+        day != prev_day or 
+        month != prev_month or 
+        year != prev_year or 
+        lat != prev_lat or 
+        lon != prev_lon or
+        axRot_az != prev_axRot_az
+    )
+    
+    if date_loc_changed:
+        for ii in range(0,24):
+            comp(np.deg2rad(zenArray[ii]), np.deg2rad(azArray[ii]), axRot_az)
+            endArr[:,ii] = start[:,0] + sunVector * length
+        
+        # Update the previous parameters
+        prev_day, prev_month, prev_year = day, month, year
+        prev_lat, prev_lon, prev_axRot_az = lat, lon, axRot_az
+
     comp(zenithIn, azimuthIn, axRot_az)
+    #initialCompute(lon, lat, year, month, day)
+    #azimuth = np.deg2rad(azArray[hour])
+    #zenith = np.deg2rad(zenArray[hour])
+
  
     with fig.batch_update():
 
