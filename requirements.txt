@@ -1,0 +1,8 @@
+voila
+numpy
+plotly
+scipy
+matplotlib
+sunposition
+ipywidgets
+IPython.display import display
