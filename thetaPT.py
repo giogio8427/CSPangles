@@ -592,7 +592,9 @@ def update_figure(day, month, year,timeCurr, lat,lon, axRot_az ):
     currTime = np.datetime64(f"{stringDay}T{time_str}")
     
     # Get the sun position for the specific time
-    azimuth[0], zenith[0] = sp.sunpos(currTime, lat_array, lon_array, 0)[:2]
+    a, b = sp.sunpos(currTime, lat_array, lon_array, 0)[:2]
+    azimuth[0]=a[0]
+    zenith[0]=b[0]    
     
     # Prepare for the hourly calculations
            
