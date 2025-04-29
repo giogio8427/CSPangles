@@ -1,9 +1,7 @@
 # %%
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 import plotly.graph_objects as go
 from scipy.linalg import norm
-import matplotlib.pyplot as plt
 import sunposition as sp
 from ipywidgets import interact, IntSlider, FloatSlider, HBox, Layout, interactive_output
 from IPython.display import display
@@ -194,13 +192,18 @@ def initialCompute(lon, lat, year, month, day):
     lat = np.array([lat])
 
     sp.disable_jit()
+    s=0.0
+    ss=0.0
     for ii in hourArray:
         addStr=''
         if ii<10:
             addStr='0'
         currTime=np.datetime64(stringDay + 'T' + addStr + str(int(ii)) + ':00:00')
-        azArray[int(ii)],zenArray[int(ii)] = sp.sunpos(currTime,lat,lon,0)[:2] #discard RA, dec, H
-
+        #azArray[int(ii)],zenArray[int(ii)],s,ss,sss = sp.sunpos(currTime,lat,lon,0) #discard RA, dec, H
+        a,b= sp.sunpos(currTime,lat,lon,0)[:2] #discard RA, dec, H 
+        azArray[int(ii)]=a[0]
+        zenArray[int(ii)]=b[0]
+    
     iiSun=np.argmax((zenArray>0) & (zenArray<=90))
     ii=iiSun
     
