@@ -1,9 +1,10 @@
 import numpy as np
 from timeUtil import timeZoneToUTC
 import sunposition as sp
+from compSub import comp
 
 
-def solarAnglesDay(year, month, day, latitude, longitude, timeZone):
+def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az):
     """
     Calculate the solar angles based on azimuth and zenith angles.
 
@@ -38,15 +39,15 @@ def solarAnglesDay(year, month, day, latitude, longitude, timeZone):
     currTime = inTime
     azimuth = np.zeros(int(60*24/15))
     zenith = np.zeros(int(60*24/15))  
+    incAngleArr = np.zeros(int(60*24/15))
     # Create the datetime64 object
     for ii in range(1,int(60*24/15)):
         currTime = inTime + np.timedelta64(ii*15, 'm')
         # Call the sunpos function
         aTemp,bTemp = sp.sunpos(currTime, latitude, longitude,0)[:2]
-  
-        
-        # Convert azimuth and zenith to degrees
+        incAngle=comp(np.deg2rad(bTemp), np.deg2rad(aTemp), axRot_az)
         azimuth[int(ii)] = aTemp
         zenith[int(ii)] = bTemp
+        incAngleArr[int(ii)]=incAngle
     hourArrayDiscr = np.linspace(0, 24, 24*4)
-    return azimuth, zenith, hourArrayDiscr
+    return azimuth, zenith, hourArrayDiscr,incAngleArr
