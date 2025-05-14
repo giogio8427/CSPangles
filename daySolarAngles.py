@@ -4,7 +4,7 @@ import sunposition as sp
 from compSub import comp
 
 
-def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az):
+def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az, compIncAngle):
     """
     Calculate the solar angles based on azimuth and zenith angles.
 
@@ -29,12 +29,11 @@ def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az):
     
     # Format the time part with leading zeros
     time_str = f"{hours:02d}:{minutes:02d}:00"
-    
     # Create the complete datetime64 string
     stringDay = f"{year_str}-{month_str}-{day_str}"
     
     # For using in sunpos function
-    time_str = "00:00:00"
+    #time_str = "00:00:00"
     inTime=np.datetime64(f"{stringDay}T{time_str}")
     currTime = inTime
     azimuth = np.zeros(int(60*24/15))
@@ -45,9 +44,10 @@ def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az):
         currTime = inTime + np.timedelta64(ii*15, 'm')
         # Call the sunpos function
         aTemp,bTemp = sp.sunpos(currTime, latitude, longitude,0)[:2]
-        incAngle=comp(np.deg2rad(bTemp), np.deg2rad(aTemp), axRot_az)
         azimuth[int(ii)] = aTemp
         zenith[int(ii)] = bTemp
-        incAngleArr[int(ii)]=incAngle
+        if compIncAngle:
+            incAngle=comp(np.deg2rad(bTemp), np.deg2rad(aTemp), axRot_az)
+            incAngleArr[int(ii)]=incAngle
     hourArrayDiscr = np.linspace(0, 24, 24*4)
     return azimuth, zenith, hourArrayDiscr,incAngleArr
