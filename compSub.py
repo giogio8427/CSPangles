@@ -31,6 +31,7 @@ def comp(zenith, azimuth, axRot_az=0):
         thetaPerp=  np.arccos(np.dot(projPerp, np.array([0, 0, 1])))
     else:
         thetaPerp= -np.arccos(np.dot(projPerp, np.array([0, 0, 1])))
+    trackingAngle=np.rad2deg(thetaPerp)
     rotZ=rotationMatrixAroundZ(np.deg2rad(90.0+axRot_az))
     rotAxis=rotationMatrixAroundZ(np.deg2rad(axRot_az)) @ np.array([1,0,0])
     rotatedTrack=rotationMatrixAroundAxis(rotAxis,-thetaPerp)
@@ -69,4 +70,4 @@ def comp(zenith, azimuth, axRot_az=0):
 
     projSunHor=projSunHor/norm(projSunHor)
     projSunHor=projSunHor*length/2.0
-    return incAngle
+    return incAngle, trackingAngle

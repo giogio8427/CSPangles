@@ -4,7 +4,7 @@ import sunposition as sp
 from compSub import comp
 
 
-def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az, compIncAngle):
+def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az, compIncAngle, minTimeStep=15):
     """
     Calculate the solar angles based on azimuth and zenith angles.
 
@@ -36,18 +36,20 @@ def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az, com
     #time_str = "00:00:00"
     inTime=np.datetime64(f"{stringDay}T{time_str}")
     currTime = inTime
-    azimuth = np.zeros(int(60*24/15))
-    zenith = np.zeros(int(60*24/15))  
-    incAngleArr = np.zeros(int(60*24/15))
+    azimuth = np.zeros(int(60*24/minTimeStep))+99.
+    zenith = np.zeros(int(60*24/minTimeStep)) +99. 
+    incAngleArr = np.zeros(int(60*24/minTimeStep))
+    trackAngleArr = np.zeros(int(60*24/minTimeStep))
     # Create the datetime64 object
-    for ii in range(1,int(60*24/15)):
-        currTime = inTime + np.timedelta64(ii*15, 'm')
+    for ii in range(0,int(60*24/minTimeStep)):
+        currTime = inTime + np.timedelta64(ii*minTimeStep, 'm')
         # Call the sunpos function
         aTemp,bTemp = sp.sunpos(currTime, latitude, longitude,0)[:2]
         azimuth[int(ii)] = aTemp
         zenith[int(ii)] = bTemp
         if compIncAngle:
-            incAngle=comp(np.deg2rad(bTemp), np.deg2rad(aTemp), axRot_az)
+            incAngle, trackAngle=comp(np.deg2rad(bTemp), np.deg2rad(aTemp), axRot_az)
             incAngleArr[int(ii)]=incAngle
-    hourArrayDiscr = np.linspace(0, 24, 24*4)
-    return azimuth, zenith, hourArrayDiscr,incAngleArr
+            trackAngleArr[int(ii)]=trackAngle
+    hourArrayDiscr = np.linspace(0, 24, 24*(60)//minTimeStep)
+    return azimuth, zenith, hourArrayDiscr,incAngleArr, trackAngleArr
