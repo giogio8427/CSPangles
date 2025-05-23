@@ -2,6 +2,5 @@ voila
 numpy
 plotly
 scipy
-matplotlib
 sunposition
 ipywidgets
