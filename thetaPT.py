@@ -1,7 +1,7 @@
 # %%
 import numpy as np
 import plotly.graph_objects as go
-from scipy.linalg import norm
+from numpy.linalg import norm
 import sunposition as sp
 from ipywidgets import interact, IntSlider, FloatSlider, HBox, Layout, interactive_output
 from IPython.display import display

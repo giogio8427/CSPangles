@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.linalg import norm
+from numpy.linalg import norm
+
 
 def sunVect(azimuth, zenith):
     return np.array([np.sin(zenith) * np.cos(azimuth), np.sin(zenith) * np.sin(azimuth), np.cos(zenith)])

@@ -1,6 +1,6 @@
 from geoElem import parabolicCylinderSurface, planeSurface, sphereSurface,  arcCircle3D, arcCircle2DAngle
 from rotMatrix import rotationMatrixAroundY, rotationMatrixAroundZ, rotationMatrixAroundAxis, rotatePoints
-from scipy.linalg import norm
+from numpy.linalg import norm
 import numpy as np
 def comp(zenith, azimuth, axRot_az=0):
     global projSunHor, zen, az,ii, startArr, sunVector, endArr, iiSun, end2, normalVect, start, end, x, y, z, xAp, yAp, zAp, xLon, yLon, zLon, xHor, yHor, zHor, xArc, yArc, zArc, xArcZen, yArcZen, zArcZen, xArcAz, yArcAz, zArcAz, xSun, ySun, zSun, incAngle, azArray, zenArray, length,thetaPerp

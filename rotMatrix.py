@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.linalg import norm
+from numpy.linalg import norm
 
 def rotationMatrixAroundY(angleRad):
     return np.array([[np.cos(angleRad), 0, np.sin(angleRad)], [0, 1, 0], [-np.sin(angleRad), 0, np.cos(angleRad)]])
