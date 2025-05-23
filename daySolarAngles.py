@@ -1,6 +1,7 @@
 import numpy as np
 from timeUtil import timeZoneToUTC
 import sunposition as sp
+sp.disable_jit()
 from compSub import comp
 
 
