@@ -1,5 +1,0 @@
-voila
-numpy
-plotly
-sunposition
-ipywidgets
