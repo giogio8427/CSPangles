@@ -2,9 +2,9 @@ from geoElem import parabolicCylinderSurface, planeSurface, sphereSurface,  arcC
 from rotMatrix import rotationMatrixAroundY, rotationMatrixAroundZ, rotationMatrixAroundAxis, rotatePoints
 from numpy.linalg import norm
 import numpy as np
-def comp(zenith, azimuth, axRot_az=0):
+from IPython.display import display
+def comp(zenith, azimuth, axRot_az=0, fixedPanel=False, tiltFixedPanel=0):
     global projSunHor, zen, az,ii, startArr, sunVector, endArr, iiSun, end2, normalVect, start, end, x, y, z, xAp, yAp, zAp, xLon, yLon, zLon, xHor, yHor, zHor, xArc, yArc, zArc, xArcZen, yArcZen, zArcZen, xArcAz, yArcAz, zArcAz, xSun, ySun, zSun, incAngle, azArray, zenArray, length,thetaPerp
-
     zen=np.rad2deg(zenith)  
     az=np.rad2deg(azimuth)
     length=10.
@@ -31,6 +31,11 @@ def comp(zenith, azimuth, axRot_az=0):
         thetaPerp=  np.arccos(np.dot(projPerp, np.array([0, 0, 1])))
     else:
         thetaPerp= -np.arccos(np.dot(projPerp, np.array([0, 0, 1])))
+       
+    if fixedPanel==True:
+        thetaPerp=np.deg2rad(tiltFixedPanel)
+     
+
     trackingAngle=np.rad2deg(thetaPerp)
     rotZ=rotationMatrixAroundZ(np.deg2rad(90.0+axRot_az))
     rotAxis=rotationMatrixAroundZ(np.deg2rad(axRot_az)) @ np.array([1,0,0])
