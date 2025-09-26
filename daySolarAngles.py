@@ -5,7 +5,7 @@ sp.disable_jit()
 from compSub import comp
 
 
-def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az, compIncAngle, minTimeStep=15):
+def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az, compIncAngle, minTimeStep=15, fixedPanel=False, tiltFixedPanel=0):
     """
     Calculate the solar angles based on azimuth and zenith angles.
 
@@ -49,7 +49,7 @@ def solarAnglesDay(year, month, day, latitude, longitude, timeZone,axRot_az, com
         azimuth[int(ii)] = aTemp
         zenith[int(ii)] = bTemp
         if compIncAngle:
-            incAngle, trackAngle=comp(np.deg2rad(bTemp), np.deg2rad(aTemp), axRot_az)
+            incAngle, trackAngle=comp(np.deg2rad(bTemp), np.deg2rad(aTemp), axRot_az, fixedPanel, tiltFixedPanel)
             incAngleArr[int(ii)]=incAngle
             trackAngleArr[int(ii)]=trackAngle
     hourArrayDiscr = np.linspace(0, 24, 24*(60)//minTimeStep)
