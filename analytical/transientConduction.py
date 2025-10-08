@@ -507,7 +507,7 @@ while (newSim=='y'):
         margin=dict(l=0, r=0, t=100, b=0)  # Minimize margins
     )
 
-    fig.show(block=False)
+    fig.show(renderer='browser')
     #endregion
     newSim = (input("Do you want to compute another simulation? (y/n): ").strip())
     

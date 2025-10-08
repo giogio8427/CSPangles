@@ -47,7 +47,7 @@ def computeQChart(geometry,biotNumbers=[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0
         yaxis_type='linear'
     )
     
-    fig.show()
+    fig.show(renderer='browser')
     return x,Q_Q0
 
 def computeChartHeisler1 (geometry):
@@ -157,7 +157,7 @@ def computeChartHeisler1 (geometry):
         ))
         ii=ii+1
 
-    fig.show()
+    fig.show(renderer='browser')
     return x,thetaRo
 
 def computeChartHeisler2 (geometry):    
@@ -203,7 +203,7 @@ def computeChartHeisler2 (geometry):
         yaxis=dict(range=[0.0, 1.0])
     )
 
-    fig.show()
+    fig.show(renderer='browser')
     flag1=0
     flag2=0
     return flag1, flag2
