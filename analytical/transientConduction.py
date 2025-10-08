@@ -356,7 +356,7 @@ while (newSim=='y'):
             len=0.4,  # Length of colorbar
             thickness=10,  # Thickness of colorbar
             title="Temperature [°C]",
-            titleside="right"
+            title_side="right"
         ))
         fig.add_trace(trace, row=1, col=1)
     # Add second sphere surface to subplot 3
@@ -507,7 +507,7 @@ while (newSim=='y'):
         margin=dict(l=0, r=0, t=100, b=0)  # Minimize margins
     )
 
-    fig.show()
+    fig.show(block=False)
     #endregion
     newSim = (input("Do you want to compute another simulation? (y/n): ").strip())
     
